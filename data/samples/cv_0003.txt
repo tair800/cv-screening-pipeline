@@ -1,0 +1,21 @@
+ELENA FISCHER
+Vienna, Austria | elena.fischer@example.com | +49 152 4539704
+
+PROFESSIONAL SUMMARY
+10 years of experience across automation and data roles.
+
+SKILLS
+Airflow, JSON, PostgreSQL, Python, RAG, REST APIs, SQL, Terraform
+
+WORK EXPERIENCE
+AI Engineer — Lumen Telecom (2023 - Present)
+AI Engineer — Halcyon Health (2021 - 2023)
+Data Analyst — Vela Financial (2019 - 2021)
+Backend Developer — Corvus Analytics (2017 - 2019)
+Integration Engineer — Orbit Manufacturing (2016 - 2017)
+
+EDUCATION
+MSc Mathematics, Warsaw University of Technology, 2014
+
+LANGUAGES
+Russian (C1), Polish (native)

@@ -1,0 +1,27 @@
+# Generated dataset — reproducible from the seed, so it does not belong in git.
+# data/samples/ is committed on purpose so the repo reads without running anything.
+data/synthetic/
+
+# Secrets — never commit API keys, tokens or connection strings
+.env
+.env.*
+*.key
+*.pem
+secrets.json
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+env/
+.pytest_cache/
+.mypy_cache/
+*.egg-info/
+
+# Editors / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+desktop.ini

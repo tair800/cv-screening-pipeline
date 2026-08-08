@@ -1,0 +1,69 @@
+{
+  "cv_id": "cv_0003",
+  "name": "Elena Fischer",
+  "email": "elena.fischer@example.com",
+  "phone": "+49 152 4539704",
+  "location": "Vienna, Austria",
+  "years_experience": 10,
+  "skills": [
+    "Airflow",
+    "JSON",
+    "PostgreSQL",
+    "Python",
+    "RAG",
+    "REST APIs",
+    "SQL",
+    "Terraform"
+  ],
+  "experience": [
+    {
+      "company": "Lumen Telecom",
+      "role": "AI Engineer",
+      "start_year": 2023,
+      "end_year": null
+    },
+    {
+      "company": "Halcyon Health",
+      "role": "AI Engineer",
+      "start_year": 2021,
+      "end_year": 2023
+    },
+    {
+      "company": "Vela Financial",
+      "role": "Data Analyst",
+      "start_year": 2019,
+      "end_year": 2021
+    },
+    {
+      "company": "Corvus Analytics",
+      "role": "Backend Developer",
+      "start_year": 2017,
+      "end_year": 2019
+    },
+    {
+      "company": "Orbit Manufacturing",
+      "role": "Integration Engineer",
+      "start_year": 2016,
+      "end_year": 2017
+    }
+  ],
+  "education": {
+    "degree": "MSc",
+    "field": "Mathematics",
+    "institution": "Warsaw University of Technology",
+    "year": 2014
+  },
+  "languages": [
+    "Russian (C1)",
+    "Polish (native)"
+  ],
+  "_meta": {
+    "layout": "classic",
+    "dropped_fields": [],
+    "bias_pair_id": "pair_02",
+    "bias_variant": "A",
+    "gender_code": "feminine",
+    "origin_code": "western_european",
+    "synthetic": true
+  }
+}

@@ -1,0 +1,67 @@
+{
+  "role_id": "ai_automation_engineer",
+  "title": "AI Automation Engineer",
+  "seniority": "junior-mid",
+  "location": "Europe / remote",
+  "note": "Requirements are weighted so scoring can be decomposed and explained. Weights are a starting point and are expected to change once ranking agreement is measured against a human shortlist.",
+  "requirements": [
+    {
+      "id": "req_python",
+      "label": "Python",
+      "type": "skill",
+      "weight": 20,
+      "must_have": true,
+      "accepted_evidence": ["Python"]
+    },
+    {
+      "id": "req_automation_platform",
+      "label": "Workflow automation platform",
+      "type": "skill_any_of",
+      "weight": 20,
+      "must_have": true,
+      "accepted_evidence": ["n8n", "Make", "Zapier", "Power Automate", "UiPath", "Airflow"]
+    },
+    {
+      "id": "req_api",
+      "label": "REST API integration",
+      "type": "skill",
+      "weight": 15,
+      "must_have": true,
+      "accepted_evidence": ["REST APIs", "JSON"]
+    },
+    {
+      "id": "req_llm",
+      "label": "LLM / GenAI experience",
+      "type": "skill_any_of",
+      "weight": 20,
+      "must_have": false,
+      "accepted_evidence": ["OpenAI API", "Prompt engineering", "RAG", "LangChain", "Hugging Face", "Dataiku"]
+    },
+    {
+      "id": "req_data",
+      "label": "Data handling",
+      "type": "skill_any_of",
+      "weight": 10,
+      "must_have": false,
+      "accepted_evidence": ["SQL", "PostgreSQL", "MongoDB", "Pandas", "dbt"]
+    },
+    {
+      "id": "req_experience",
+      "label": "Relevant experience",
+      "type": "years",
+      "weight": 15,
+      "must_have": false,
+      "target_years": 2,
+      "note": "Scored on a curve; 0 years is not disqualifying for a junior-mid opening."
+    }
+  ],
+  "excluded_from_scoring": [
+    "name",
+    "email",
+    "phone",
+    "location",
+    "languages",
+    "education.institution"
+  ],
+  "exclusion_rationale": "Identity and contact fields carry demographic signal and are irrelevant to competence. Institution is excluded to avoid prestige bias. Languages are excluded here because the role is English-only; a role with a genuine language requirement would score it explicitly rather than implicitly."
+}
