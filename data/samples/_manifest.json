@@ -16,32 +16,32 @@
     },
     {
       "cv_id": "cv_0003",
-      "layout": "classic",
+      "layout": "compact",
       "bias_pair_id": "pair_02"
     },
     {
       "cv_id": "cv_0004",
-      "layout": "classic",
+      "layout": "compact",
       "bias_pair_id": "pair_02"
     },
     {
       "cv_id": "cv_0005",
-      "layout": "verbose",
+      "layout": "classic",
       "bias_pair_id": "pair_03"
     },
     {
       "cv_id": "cv_0006",
-      "layout": "verbose",
+      "layout": "classic",
       "bias_pair_id": "pair_03"
     },
     {
       "cv_id": "cv_0007",
-      "layout": "verbose",
+      "layout": "compact",
       "bias_pair_id": "pair_04"
     },
     {
       "cv_id": "cv_0008",
-      "layout": "verbose",
+      "layout": "compact",
       "bias_pair_id": "pair_04"
     },
     {
@@ -71,7 +71,7 @@
     },
     {
       "cv_id": "cv_0014",
-      "layout": "verbose",
+      "layout": "classic",
       "bias_pair_id": null
     },
     {
@@ -91,7 +91,7 @@
     },
     {
       "cv_id": "cv_0018",
-      "layout": "verbose",
+      "layout": "compact",
       "bias_pair_id": null
     },
     {
@@ -116,7 +116,7 @@
     },
     {
       "cv_id": "cv_0023",
-      "layout": "classic",
+      "layout": "verbose",
       "bias_pair_id": null
     },
     {
@@ -126,12 +126,12 @@
     },
     {
       "cv_id": "cv_0025",
-      "layout": "verbose",
+      "layout": "classic",
       "bias_pair_id": null
     },
     {
       "cv_id": "cv_0026",
-      "layout": "verbose",
+      "layout": "classic",
       "bias_pair_id": null
     },
     {
@@ -141,7 +141,7 @@
     },
     {
       "cv_id": "cv_0028",
-      "layout": "verbose",
+      "layout": "classic",
       "bias_pair_id": null
     },
     {
@@ -151,27 +151,27 @@
     },
     {
       "cv_id": "cv_0030",
-      "layout": "compact",
+      "layout": "verbose",
       "bias_pair_id": null
     },
     {
       "cv_id": "cv_0031",
-      "layout": "verbose",
-      "bias_pair_id": null
-    },
-    {
-      "cv_id": "cv_0032",
       "layout": "compact",
       "bias_pair_id": null
     },
     {
-      "cv_id": "cv_0033",
+      "cv_id": "cv_0032",
       "layout": "verbose",
       "bias_pair_id": null
     },
     {
+      "cv_id": "cv_0033",
+      "layout": "compact",
+      "bias_pair_id": null
+    },
+    {
       "cv_id": "cv_0034",
-      "layout": "classic",
+      "layout": "verbose",
       "bias_pair_id": null
     },
     {
@@ -181,17 +181,17 @@
     },
     {
       "cv_id": "cv_0036",
-      "layout": "compact",
+      "layout": "verbose",
       "bias_pair_id": null
     },
     {
       "cv_id": "cv_0037",
-      "layout": "verbose",
+      "layout": "compact",
       "bias_pair_id": null
     },
     {
       "cv_id": "cv_0038",
-      "layout": "verbose",
+      "layout": "classic",
       "bias_pair_id": null
     },
     {
@@ -211,12 +211,12 @@
     },
     {
       "cv_id": "cv_0042",
-      "layout": "compact",
+      "layout": "verbose",
       "bias_pair_id": null
     },
     {
       "cv_id": "cv_0043",
-      "layout": "compact",
+      "layout": "classic",
       "bias_pair_id": null
     },
     {
@@ -226,12 +226,12 @@
     },
     {
       "cv_id": "cv_0045",
-      "layout": "compact",
+      "layout": "classic",
       "bias_pair_id": null
     },
     {
       "cv_id": "cv_0046",
-      "layout": "verbose",
+      "layout": "compact",
       "bias_pair_id": null
     },
     {
@@ -241,52 +241,52 @@
     },
     {
       "cv_id": "cv_0048",
-      "layout": "classic",
+      "layout": "verbose",
       "bias_pair_id": null
     },
     {
       "cv_id": "cv_0049",
-      "layout": "compact",
+      "layout": "classic",
       "bias_pair_id": null
     },
     {
       "cv_id": "cv_0050",
-      "layout": "classic",
+      "layout": "compact",
       "bias_pair_id": null
     },
     {
       "cv_id": "cv_0051",
-      "layout": "verbose",
+      "layout": "classic",
       "bias_pair_id": null
     },
     {
       "cv_id": "cv_0052",
-      "layout": "compact",
+      "layout": "verbose",
       "bias_pair_id": null
     },
     {
       "cv_id": "cv_0053",
-      "layout": "verbose",
+      "layout": "compact",
       "bias_pair_id": null
     },
     {
       "cv_id": "cv_0054",
-      "layout": "compact",
-      "bias_pair_id": null
-    },
-    {
-      "cv_id": "cv_0055",
-      "layout": "compact",
-      "bias_pair_id": null
-    },
-    {
-      "cv_id": "cv_0056",
       "layout": "verbose",
       "bias_pair_id": null
     },
     {
+      "cv_id": "cv_0055",
+      "layout": "verbose",
+      "bias_pair_id": null
+    },
+    {
+      "cv_id": "cv_0056",
+      "layout": "compact",
+      "bias_pair_id": null
+    },
+    {
       "cv_id": "cv_0057",
-      "layout": "classic",
+      "layout": "compact",
       "bias_pair_id": null
     },
     {
@@ -301,7 +301,7 @@
     },
     {
       "cv_id": "cv_0060",
-      "layout": "classic",
+      "layout": "compact",
       "bias_pair_id": null
     }
   ],

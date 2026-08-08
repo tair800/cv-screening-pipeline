@@ -4,6 +4,6 @@ Between 2022 and now I worked as Automation Engineer at Northwind Logistics. Bet
 
 Day to day I work with Azure, Hugging Face, Make, Python, REST APIs and Snowflake.
 
-I hold a BA in Computer Science from Technical University of Munich, completed in 2016. I speak English (B2), German (B1), Polish (native).
+I hold a MSc in Software Engineering from Technical University of Munich, completed in 2016. I speak English (B2), German (B1), Polish (native).
 
 You can reach me at tahir.demir@example.com.

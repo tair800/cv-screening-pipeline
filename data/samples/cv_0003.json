@@ -1,9 +1,9 @@
 {
   "cv_id": "cv_0003",
-  "name": "Elena Fischer",
-  "email": "elena.fischer@example.com",
-  "phone": "+49 152 4539704",
-  "location": "Vienna, Austria",
+  "name": "Marta Weber",
+  "email": "marta.weber@example.com",
+  "phone": "+49 156 6279418",
+  "location": "Tallinn, Estonia",
   "years_experience": 10,
   "skills": [
     "Airflow",
@@ -51,14 +51,14 @@
     "degree": "MSc",
     "field": "Mathematics",
     "institution": "Warsaw University of Technology",
-    "year": 2014
+    "year": 2016
   },
   "languages": [
-    "Russian (C1)",
+    "English (C1)",
     "Polish (native)"
   ],
   "_meta": {
-    "layout": "classic",
+    "layout": "compact",
     "dropped_fields": [],
     "bias_pair_id": "pair_02",
     "bias_variant": "A",

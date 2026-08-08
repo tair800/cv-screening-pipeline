@@ -76,6 +76,33 @@ Synthetic data buys two things beyond safety:
 
 Generation is seeded, so the dataset is reproducible.
 
+## Dataset design
+
+The dataset is built to be awkward on purpose. A pipeline that only works on tidy input
+has not been tested.
+
+**Three layouts.** Every CV is rendered in one of three formats — `classic` with clear
+section headings, `compact` with facts inlined, and `verbose` where the same facts are
+buried in prose. Real CVs disagree about section names, ordering, and whether structure
+exists at all, so a parser validated against one tidy format is not validated.
+
+**Missing fields.** Around a fifth of CVs omit a phone number, and some list fewer
+languages. The pipeline has to distinguish *not stated* from *not qualified* — treating
+absence as a negative would penalise candidates for formatting choices.
+
+**Matched pairs.** Roughly a fifth of the set is emitted in pairs that share one
+qualifications record, one layout, and one location. **Only the name differs.** Pinning
+the layout and the location matters: if the two halves of a pair sat in different cities
+or used different formats, a score gap could be blamed on geography or parsing, and the
+test would prove nothing.
+
+**Demographic labels.** Each ground-truth record carries `gender_code` and `origin_code`
+in its `_meta` block. These exist so parity can be measured across the dataset. **The
+pipeline is never permitted to read them** — they are evaluation metadata, not features.
+
+Contact details use `example.com`, reserved for documentation by RFC 2606, so no address
+in this repository can reach a real inbox.
+
 ---
 
 ## Getting started
