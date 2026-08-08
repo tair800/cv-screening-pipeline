@@ -187,12 +187,16 @@ def render_verbose(record: dict) -> str:
         f"{job['role']} at {job['company']}."
         for job in record["experience"]
     )
+    contact = f"You can reach me at {record['email']}"
+    if record.get("phone"):
+        contact += f" or on {record['phone']}"
+
     return (
         f"{opening}\n\n{history}\n\n"
         f"Day to day I work with {', '.join(record['skills'][:-1])} and {record['skills'][-1]}.\n\n"
         f"I hold a {edu['degree']} in {edu['field']} from {edu['institution']}, completed in {edu['year']}. "
         f"I speak {', '.join(record['languages'])}.\n\n"
-        f"You can reach me at {record['email']}.\n"
+        f"{contact}.\n"
     )
 
 

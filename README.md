@@ -108,14 +108,62 @@ in this repository can reach a real inbox.
 ## Getting started
 
 ```bash
-# 1. Generate the synthetic dataset (no dependencies required)
+pip install -r requirements.txt
+
+# 1. Generate the synthetic dataset
 python src/generate_synthetic_cvs.py --count 60 --seed 42
 
-# 2. Inspect what was produced
-#    data/synthetic/cv_0001.txt    <- unstructured CV, the pipeline input
-#    data/synthetic/cv_0001.json   <- ground truth, what extraction should return
-#    data/synthetic/_manifest.json <- dataset index + bias-test pairs
+# 2. Extract from a single CV
+python src/extract_baseline.py data/samples/cv_0001.txt
+
+# 3. Score the extractor against ground truth
+python src/evaluate.py --extractor baseline
 ```
+
+What step 1 produces:
+
+| File | Contents |
+|---|---|
+| `data/synthetic/cv_0001.txt` | Unstructured CV — the pipeline input |
+| `data/synthetic/cv_0001.json` | Ground truth — what extraction should return |
+| `data/synthetic/_manifest.json` | Dataset index and bias-pair register |
+
+## Results so far
+
+The rule-based extractor is the baseline the LLM has to beat. Publishing its numbers
+first makes the later comparison honest: if an LLM cannot clear these, the extra cost,
+latency and non-determinism are not justified.
+
+Measured on 60 synthetic CVs, seed 42:
+
+| Metric | Baseline (rules) |
+|---|---|
+| Schema-valid records | 60 / 60 |
+| Hallucinated skills | 0 |
+| Name | 100% |
+| Email / phone | 100% |
+| Years of experience | 100% |
+| **Location** | **67%** |
+| Skills — recall / precision | 100% / 98.7% |
+| **Work history (entry count)** | **35%** |
+
+Broken down by CV layout, the pattern is unambiguous:
+
+| Layout | CVs | Work history correct |
+|---|---|---|
+| `classic` — clear headings | 15 | **100%** |
+| `compact` — inlined facts | 21 | **19%** |
+| `verbose` — facts in prose | 24 | **8%** |
+
+**Reading the result.** Rules are excellent at closed vocabularies and fixed formats —
+a skill list and an email address are pattern-matching problems, and pattern matching
+solves them perfectly and for free. Rules collapse on *structure*: work history is only
+recovered when the CV already presents it as `Role — Company (2022 - Present)`. The
+location errors have the same cause; the pattern has no idea what a place is, so it
+happily returns `Science, Technical University of Munich`.
+
+That gap is the actual case for an LLM, and it is now a measured gap rather than an
+assumption.
 
 ## Repository layout
 
@@ -135,10 +183,11 @@ cv-screening-pipeline/
 ## Roadmap
 
 - [x] Synthetic dataset generator with ground truth and bias pairs
-- [ ] Problem statement and success criteria
-- [ ] CV parsing and normalisation
-- [ ] LLM structured extraction against a JSON Schema
-- [ ] Evaluation harness — extraction accuracy vs. ground truth
+- [x] Problem statement and success criteria
+- [x] Extraction schema with evidence spans and hallucination check
+- [x] Rule-based baseline extractor
+- [x] Evaluation harness — extraction accuracy vs. ground truth
+- [ ] LLM structured extraction against the same schema
 - [ ] Explainable scoring and ranking
 - [ ] Human-in-the-loop override flow
 - [ ] Bias parity testing across matched pairs
