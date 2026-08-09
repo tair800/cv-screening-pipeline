@@ -118,7 +118,40 @@ python src/extract_baseline.py data/samples/cv_0001.txt
 
 # 3. Score the extractor against ground truth
 python src/evaluate.py --extractor baseline
+
+# 4. Configure a model, then verify the connection before spending anything
+cp .env.example .env        # then fill in LLM_API_KEY
+python src/check_connection.py
+
+# 5. The LLM extractor
+python src/extract_llm.py data/samples/cv_0003.txt
+python src/evaluate.py --extractor llm --limit 5    # start small
+
+# 6. Failure-path tests (no key, no network)
+python tests/test_parse.py
 ```
+
+### Configuring a model
+
+The extractor speaks the OpenAI chat-completions protocol, which is the closest thing to
+a lingua franca among model providers. One set of three variables in `.env` therefore
+points it at a gateway, a hosted provider, or a model running on the same machine —
+without a line of code changing:
+
+```ini
+LLM_BASE_URL=http://localhost:20128/v1
+LLM_API_KEY=...
+LLM_MODEL=auto/best-free
+```
+
+`src/check_connection.py` verifies that configuration layer by layer — file, credential,
+TCP reachability, model catalogue, a one-token round trip, and which schema-enforcement
+tiers the endpoint supports — so a misconfiguration names its own cause instead of
+surfacing as a stack trace midway through a paid batch run.
+
+**`.env` is git-ignored; `.env.example` is committed.** The template lists the variable
+names with empty values, so the repository documents its own configuration without ever
+carrying a credential.
 
 What step 1 produces:
 
@@ -165,6 +198,72 @@ happily returns `Science, Technical University of Munich`.
 That gap is the actual case for an LLM, and it is now a measured gap rather than an
 assumption.
 
+### How the LLM extractor is constrained
+
+The LLM is given the *same* schema, enforced by the API's structured-output mode rather
+than requested in the prompt — the model cannot return a shape that fails to parse,
+because a non-conforming token is never generated. Three details do the real work:
+
+**Nullable everywhere.** Every optional field admits `null`. A schema that forces a value
+does not produce a correct value; it produces an invented one, because the model has no
+legal way to say *not stated*. Permission to return nothing is the single most effective
+hallucination control in the schema.
+
+**Evidence spans.** Each extracted skill must carry a span copied verbatim from the CV.
+`verify_evidence()` then checks that the span actually occurs in the source text, which
+turns "did the model invent this?" from a judgement call into a string comparison.
+
+**Two schemas, one contract.** The structured-output API rejects `minimum`, `maximum` and
+`minLength`, so `api_schema()` strips them before the request while `CANDIDATE_SCHEMA`
+keeps them for local validation. The API constrains the *shape*; `validate_record()`
+enforces the *bounds*. Neither alone is sufficient.
+
+Extraction is run at `effort: "low"` — reading a document into a fixed schema is
+mechanical work, and the token cost of deliberation is not repaid here.
+
+### Schema enforcement is a capability, not a guarantee
+
+Not every endpoint can constrain output. A gateway in front of many providers, an older
+model, a local runtime — each supports a different subset, and the same code has to work
+across all of them. The OpenAI-compatible extractor therefore negotiates downward on the
+first call and remembers what worked:
+
+| Tier | Request | Enforced by |
+|---|---|---|
+| 1 | `response_format: json_schema` | The API — non-conforming output cannot be generated |
+| 2 | `response_format: json_object` | The API guarantees valid JSON; the *shape* is only requested |
+| 3 | Prompt alone, then recover the object from the text | Nothing |
+
+Tier 3 is where a naive implementation breaks: models wrap JSON in markdown fences, open
+with "Sure! Here is…", or close with an offer to help further. The parser strips fences
+and takes the outermost `{…}` span; `tests/test_parse.py` pins each of those cases.
+
+#### Accepting a constraint is not the same as honouring it
+
+Running against a multi-provider gateway surfaced a failure mode worth designing for. The
+endpoint **accepted** `response_format: json_schema` — no error, no warning — and then
+returned a record that violated that schema thirteen ways:
+
+| Field | Schema requires | Endpoint returned |
+|---|---|---|
+| `education` | object or null | a one-element **array** |
+| `experience[].role` | `role` | `title` — a field name that does not exist in the schema |
+| `languages[]` | string | `{"language": …, "proficiency": …}` objects |
+
+Nothing raised. Had the record been trusted, `education` would have reached the scoring
+stage as the wrong type, every job would have been missing `role`, and the failure would
+have surfaced far from its cause — or worse, not at all.
+
+**Silent non-enforcement is more dangerous than rejection**, because rejection is a signal
+and silence is not. So the extractor validates its own output rather than trusting the
+transport: on violation it feeds the specific errors back and asks for a corrected record,
+once. In the run above that took 13 violations to 0, with no loss of extracted content.
+
+**The guarantees do not live in the API call.** `validate_record()` checks shape and
+`verify_evidence()` checks for invention, and both run identically whichever tier served
+the request — or claimed to. A pipeline whose correctness depends on a provider being
+generous is a pipeline that breaks the first time it moves.
+
 ## Repository layout
 
 ```
@@ -187,7 +286,10 @@ cv-screening-pipeline/
 - [x] Extraction schema with evidence spans and hallucination check
 - [x] Rule-based baseline extractor
 - [x] Evaluation harness — extraction accuracy vs. ground truth
-- [ ] LLM structured extraction against the same schema
+- [x] LLM structured extraction against the same schema
+- [x] Provider-agnostic configuration + connection diagnostic
+- [x] Local validation with a single self-repair pass
+- [ ] Measured LLM-vs-baseline comparison
 - [ ] Explainable scoring and ranking
 - [ ] Human-in-the-loop override flow
 - [ ] Bias parity testing across matched pairs

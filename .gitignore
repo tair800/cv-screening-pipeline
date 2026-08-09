@@ -2,9 +2,11 @@
 # data/samples/ is committed on purpose so the repo reads without running anything.
 data/synthetic/
 
-# Secrets — never commit API keys, tokens or connection strings
+# Secrets — never commit API keys, tokens or connection strings.
+# .env.example is the exception: it lists variable names with no values.
 .env
 .env.*
+!.env.example
 *.key
 *.pem
 secrets.json

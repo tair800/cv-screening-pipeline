@@ -20,6 +20,9 @@ def _load_extractor(name: str):
     if name == "baseline":
         from extract_baseline import extract
         return extract
+    if name == "llm":
+        from extract_llm import extract
+        return extract
     raise SystemExit(f"unknown extractor: {name}")
 
 
@@ -30,23 +33,29 @@ def _skill_scores(predicted: dict, truth: dict) -> tuple[int, int, int]:
     return hits, len(predicted_skills) - hits, len(true_skills) - hits
 
 
-def evaluate(extractor_name: str, data_dir: Path) -> dict:
+def evaluate(extractor_name: str, data_dir: Path, limit: int | None = None) -> dict:
     extract = _load_extractor(extractor_name)
 
     cv_files = sorted(data_dir.glob("cv_*.txt"))
     if not cv_files:
         raise SystemExit(f"no CVs in {data_dir} — run generate_synthetic_cvs.py first")
+    if limit:
+        cv_files = cv_files[:limit]
 
     field_hits = defaultdict(int)
     by_layout = defaultdict(lambda: {"total": 0, "name_hits": 0, "experience_hits": 0})
-    schema_failures, hallucinations = [], []
+    schema_failures, hallucinations, extraction_errors = [], [], []
     skill_hits = skill_false = skill_missed = 0
     experience_hits = 0
 
     for cv_path in cv_files:
         text = cv_path.read_text(encoding="utf-8")
         truth = json.loads(cv_path.with_suffix(".json").read_text(encoding="utf-8"))
-        predicted = extract(cv_path.stem, text)
+        try:
+            predicted = extract(cv_path.stem, text)
+        except Exception as error:
+            extraction_errors.append((cv_path.stem, f"{type(error).__name__}: {error}"))
+            continue
 
         errors = validate_record(predicted)
         if errors:
@@ -73,10 +82,14 @@ def evaluate(extractor_name: str, data_dir: Path) -> dict:
         by_layout[layout]["name_hits"] += predicted.get("name") == truth.get("name")
         by_layout[layout]["experience_hits"] += experience_match
 
-    total = len(cv_files)
+    total = len(cv_files) - len(extraction_errors)
+    if total == 0:
+        raise SystemExit(f"every extraction failed; first error: {extraction_errors[0][1]}")
+
     return {
         "extractor": extractor_name,
         "cvs": total,
+        "extraction_errors": extraction_errors[:5],
         "schema_valid": total - len(schema_failures),
         "schema_failures": schema_failures[:5],
         "hallucinated_skills": hallucinations[:5],
@@ -99,13 +112,15 @@ def evaluate(extractor_name: str, data_dir: Path) -> dict:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Evaluate an extractor against ground truth.")
-    parser.add_argument("--extractor", default="baseline", help="extractor to evaluate")
+    parser.add_argument("--extractor", default="baseline", help="baseline | llm")
+
+    parser.add_argument("--limit", type=int, help="only evaluate the first N CVs")
     parser.add_argument("--data", type=Path,
                         default=Path(__file__).resolve().parents[1] / "data" / "synthetic",
                         help="directory holding cv_*.txt and cv_*.json")
     args = parser.parse_args()
 
-    report = evaluate(args.extractor, args.data)
+    report = evaluate(args.extractor, args.data, limit=args.limit)
     print(json.dumps(report, indent=2, ensure_ascii=False))
 
 

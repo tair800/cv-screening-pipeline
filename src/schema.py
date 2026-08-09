@@ -64,6 +64,24 @@ CANDIDATE_SCHEMA = {
 
 _validator = Draft202012Validator(CANDIDATE_SCHEMA)
 
+_UNSUPPORTED_BY_API = ("minimum", "maximum", "minLength", "maxLength", "multipleOf")
+
+
+def api_schema() -> dict:
+    """Return the schema with keywords the structured-output API rejects removed.
+
+    Bounds stay in CANDIDATE_SCHEMA and are enforced locally by validate_record."""
+    def strip(node):
+        if isinstance(node, dict):
+            return {k: strip(v) for k, v in node.items() if k not in _UNSUPPORTED_BY_API}
+        if isinstance(node, list):
+            return [strip(item) for item in node]
+        return node
+
+    schema = strip(CANDIDATE_SCHEMA)
+    schema.pop("$schema", None)
+    return schema
+
 
 def validate_record(record: dict) -> list[str]:
     """Return a list of schema violations. Empty list means the record is valid."""
