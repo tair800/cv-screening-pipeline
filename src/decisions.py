@@ -38,9 +38,20 @@ def _now() -> str:
 
 
 def record(cv_id: str, decision: str, actor: str, reason: str,
-           scored: dict | None = None, log: Path = LOG) -> dict:
+           scored: dict | None = None, log: Path = LOG,
+           idempotency_key: str | None = None) -> dict:
     """Append one decision. Existing entries are never modified — a change of mind is a
-    new entry, which is what makes the log an audit trail rather than a status field."""
+    new entry, which is what makes the log an audit trail rather than a status field.
+
+    `idempotency_key` makes a retry safe. Without one, a caller that retries after a
+    timeout appends a second entry, and nothing downstream can tell that duplicate from a
+    genuine repeated decision — an append-only log cannot infer intent. Supplying a key
+    moves that judgement to the caller, which is the only place it exists."""
+    if idempotency_key:
+        for entry in load(log):
+            if entry.get("idempotency_key") == idempotency_key:
+                return entry
+
     if decision not in DECISIONS:
         raise DecisionError(f"decision must be one of {DECISIONS}, got {decision!r}")
     if not reason.strip():
@@ -64,6 +75,7 @@ def record(cv_id: str, decision: str, actor: str, reason: str,
             "unmet_must_haves": scored.get("unmet_must_haves") if scored else None,
             "model": os.environ.get("LLM_MODEL"),
         },
+        "idempotency_key": idempotency_key,
     }
 
     log.parent.mkdir(parents=True, exist_ok=True)
@@ -122,6 +134,7 @@ def main() -> None:
     parser.add_argument("--decision", choices=DECISIONS)
     parser.add_argument("--actor", default=os.environ.get("DECISION_ACTOR", ""))
     parser.add_argument("--reason", default="")
+    parser.add_argument("--key", help="idempotency key: re-running with the same key is a no-op")
     parser.add_argument("--list", action="store_true", help="show the audit trail")
     parser.add_argument("--records", type=Path, default=ROOT / "data" / "synthetic")
     parser.add_argument("--role", type=Path,
@@ -154,12 +167,15 @@ def main() -> None:
     if scored is None:
         raise SystemExit(f"no record with cv_id {args.cv} in {args.records}")
 
+    before = len(load())
     try:
-        entry = record(args.cv, args.decision, args.actor, args.reason, scored)
+        entry = record(args.cv, args.decision, args.actor, args.reason, scored,
+                       idempotency_key=args.key)
     except DecisionError as error:
         raise SystemExit(f"refused: {error}")
 
-    print(f"recorded: {entry['cv_id']} {entry['decision']} "
+    verb = "recorded" if len(load()) > before else "already recorded (idempotent no-op)"
+    print(f"{verb}: {entry['cv_id']} {entry['decision']} "
           f"(pipeline score {entry['pipeline']['score']}) by {entry['actor']}")
 
 

@@ -132,10 +132,8 @@ python src/score.py --top 10
 python src/score.py --explain cv_0021     # full point-by-point breakdown
 python src/score.py --audit               # does the rubric actually separate candidates?
 
-# 7. Tests (no key, no network)
-python tests/test_parse.py
-python tests/test_alias_matching.py
-python tests/test_bias_parity.py
+# 7. Tests — no key, no network, no cost
+python tests/run_all.py
 
 # 8. Parity over real extractions rather than ground truth — this is the harder test
 python src/extract_batch.py --pairs-only            # resumable; skips what exists
@@ -610,6 +608,61 @@ refused: a reason is required: an override with no stated reason is not reviewab
 The log itself is git-ignored. It is a record of real decisions about real people and
 belongs in an access-controlled store with a retention policy, not in a repository.
 
+## Tests, and the bug they found
+
+Five suites, all offline — no key, no network, no cost:
+
+```
+$ python tests/run_all.py
+PASS  test_validation.py       shape drift, bounds, invented evidence
+PASS  test_parse.py            JSON recovery from fenced / prefaced / trailing prose
+PASS  test_alias_matching.py   forms that must match, near-misses that must not
+PASS  test_decisions.py        append-only history, mandatory provenance, safe retries
+PASS  test_bias_parity.py      matched-pair score and extraction parity
+
+5/5 suites passed
+```
+
+Everything the README claims about surviving a provider that ignores a schema, or about
+detecting invented skills, rests on two functions: `validate_record` and
+`verify_evidence`. Both were **untested** until now — an untested safety net is an
+assumption, and writing the tests immediately proved the point:
+
+```python
+# verify_evidence, before
+if _normalise(skill.get("evidence", "")) not in haystack:
+```
+
+**The empty string is a substring of every string.** A skill returned with blank evidence
+therefore passed the containment check and was accepted as verified — by the one function
+whose entire purpose is catching a claim the model cannot point at. The test case
+`empty evidence` failed on its first run, which is how the bug surfaced.
+
+Several of the validation cases cover violations the API **cannot** catch: `api_schema()`
+strips `minimum`, `maximum` and `minLength` before sending, so a `years_experience` of 200
+or a graduation year of 1742 is schema-valid on the wire and rejected only locally. The
+test asserts that split explicitly, so a later "simplification" that sends the full schema
+or drops local validation breaks a test rather than a candidate's score.
+
+### Idempotency: the log cannot infer intent
+
+Re-running a decision command appended a second identical entry. In an append-only audit
+trail, that duplicate is indistinguishable from a genuine repeated decision — and no
+amount of cleverness in the log can tell them apart, because the difference is intent and
+intent lives with the caller.
+
+So `record()` takes an optional `idempotency_key`. With one, a retry after a timeout is a
+no-op that returns the original entry. Without one, the retry appends — and the docstring
+says so, rather than leaving a caller to discover it from a duplicated audit trail.
+
+```bash
+python src/decisions.py --cv cv_0003 --decision hold --actor a@example.com \
+    --reason "awaiting portfolio" --key req-9f2      # safe to retry
+```
+
+`extract_batch.py` is idempotent by a different route: it skips a CV whose record already
+exists, so an interrupted run costs nothing to resume and cannot double-charge.
+
 ## Repository layout
 
 ```
@@ -646,7 +699,8 @@ cv-screening-pipeline/
 - [ ] More matched pairs — six cannot distinguish a direction from an accident
 - [x] Human-in-the-loop override flow
 - [x] Append-only audit trail with score snapshots
-- [ ] Failure-path tests and retry / idempotency
+- [x] Failure-path tests for validation, evidence, parsing, decisions
+- [x] Idempotency — keyed decisions, resumable extraction
 - [ ] Metrics dashboard and results write-up
 
 ---

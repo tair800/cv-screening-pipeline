@@ -98,10 +98,15 @@ def _normalise(text: str) -> str:
 def verify_evidence(record: dict, source_text: str) -> list[str]:
     """Return skills whose evidence span does not appear in the source CV.
 
-    A non-empty result means the extractor invented something."""
+    A non-empty result means the extractor claimed a skill it cannot point at.
+
+    Blank evidence is treated as unsupported rather than as a trivial pass. The empty
+    string is a substring of every string, so a naive containment check accepts a skill
+    backed by nothing at all — which is the exact failure this function exists to catch."""
     haystack = _normalise(source_text)
-    return [
-        skill["name"]
-        for skill in record.get("skills", [])
-        if _normalise(skill.get("evidence", "")) not in haystack
-    ]
+    unsupported = []
+    for skill in record.get("skills", []):
+        evidence = _normalise(skill.get("evidence") or "")
+        if not evidence or evidence not in haystack:
+            unsupported.append(skill.get("name", ""))
+    return unsupported
