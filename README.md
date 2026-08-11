@@ -135,6 +135,13 @@ python src/score.py --audit               # does the rubric actually separate ca
 # 7. Tests (no key, no network)
 python tests/test_parse.py
 python tests/test_bias_parity.py
+
+# 8. Parity over real extractions rather than ground truth — this is the harder test
+python src/extract_batch.py --pairs-only            # resumable; skips what exists
+python tests/test_bias_parity.py --records data/extracted
+
+# 9. Before reading anything into a pair difference, measure the noise floor
+python src/measure_stability.py --cv cv_0011 --runs 5
 ```
 
 ### Configuring a model
@@ -403,11 +410,103 @@ matched pairs: 6   source: synthetic
 all 6 pairs scored identically — no disparate treatment detected
 ```
 
-The test exits non-zero on any gap, so it can gate a change. Passing here is expected
-rather than impressive — the allow-list makes it structural — and that is the point: the
-test exists to catch the day someone widens the allow-list. Running the same test over
-LLM-extracted records rather than ground truth tests the *pipeline* instead of the
-scorer, and is the more interesting measurement still outstanding.
+Passing here is expected rather than impressive — the allow-list makes it structural —
+and that is the point: the test exists to catch the day someone widens the allow-list.
+
+### Running the same test over real extractions changed the conclusion
+
+Ground truth gives both halves of a pair one shared qualifications record, so the scorer
+is the only thing under test. Re-running against records the LLM actually produced tests
+the **pipeline**, where the model does see the name. Scores still matched — and something
+else did not:
+
+```
+   ok   pair_06  cv_0011  80.00   cv_0012  80.00   delta +0.00
+          only in cv_0011: automation, data integration
+
+WARNING  1 of 6 pairs were extracted differently from identical text.
+PASS     all 6 pairs scored identically
+```
+
+The two CVs are byte-identical apart from the name. Same layout, same location, same
+eight years. From the same narrative sentence — *"worked mainly on automation and data
+integration problems"* — the model extracted two extra skills for one and not the other:
+
+| | `cv_0011` (Sophie Novak) | `cv_0012` (Tahir Haddad) |
+|---|---|---|
+| Skills extracted | **9** | **7** |
+| Extra | `Automation`, `Data integration` | — |
+
+**Score parity held by coincidence, not by design.** Neither extracted token appears in
+any requirement's `accepted_evidence`, so neither earned a point. Had the role definition
+listed either one, this pair would have diverged — and the only reason we know that is
+that the test reports the extraction diff alongside the score.
+
+**A score check that passes can hide a pipeline that reads the same text differently
+depending on the name attached to it.** So the test now reports two things separately:
+score parity gates the build, extraction parity raises a warning.
+
+### Ruling out the boring explanation first
+
+Three explanations fit that observation, and a single pair cannot separate them:
+
+1. **A name effect** — the model read the text differently because the name differed.
+2. **Ordinary non-determinism** — `temperature: 0` constrains sampling, not serving; batching and hardware still admit run-to-run variation.
+3. **Model routing** — these records came through a multi-provider gateway on the alias `auto/best-free`, which selects a model per request. The two halves may simply have been answered by two different models.
+
+Explanation 2 is the cheapest to test and the most likely to make the finding evaporate,
+so it goes first. `src/measure_stability.py` extracts one CV repeatedly and reports how
+much the output moves when the input does not. **A parity test cannot attribute anything
+to the name until it knows how much the pipeline varies on its own.**
+
+Both halves of the pair, five runs each:
+
+| | Runs | Distinct skill sets | Skills found | Scalar fields |
+|---|---|---|---|---|
+| `cv_0011` — Sophie Novak | 5 | **1** | **9** | all stable |
+| `cv_0012` — Tahir Haddad | 5 | **1** | **7** | all stable |
+
+**Ten extractions, zero within-candidate variation, a consistent two-skill difference
+between candidates.** The non-determinism floor is zero, so explanation 2 is out: this
+difference is reproducible, not noise.
+
+That also undercuts explanation 3. If the alias selected a model per request, five runs of
+`cv_0011` would have spread across models and shown variation. They did not — so routing
+is either fixed or a *function of the input*. And if it is a function of the input (content
+hashing is ordinary gateway behaviour), then:
+
+```
+name changes → content hash changes → model changes → extraction changes
+```
+
+which is still a name effect, with the mechanism sitting in the infrastructure rather than
+in the model's attention. The effect is the same; only the place you would fix it moves.
+
+### What this establishes, and what it does not
+
+**Established.** Extraction differs systematically and reproducibly between two CVs that
+differ only by name. Ten runs, no within-candidate variance.
+
+**Not established — the mechanism.** Model attention versus name-mediated routing is
+still open. Separating them requires pinning one model version and repeating the
+comparison. `--model` on both the extractor and the stability tool exists for exactly that.
+
+**Not established — that this generalises.** One pair of six diverged. Five did not. This
+is a reproducible signal on a single pair, not a property of the model, and calling it one
+would be the same overreach as calling a single passing test a fix.
+
+**Not established — harm.** Neither extra skill was scored, so no candidate was ranked
+differently. The pipeline was lucky, not correct.
+
+The direction is recorded because omitting it would be its own distortion: the candidate
+who gained the two skills carries the feminine / Western-European name codes and the one
+who did not carries the masculine / other-origin codes. **With one pair, that is a
+coincidence until a larger sample says otherwise** — a matched-pair design needs enough
+pairs to distinguish a direction from an accident, and six is not enough.
+
+That is the honest state of it: the harness works, it found a reproducible inconsistency
+on its first serious run, the cheap explanation has been eliminated, and the mechanism and
+the scale are both still open.
 
 ## Repository layout
 
@@ -437,8 +536,11 @@ cv-screening-pipeline/
 - [x] Measured LLM-vs-baseline comparison (n=5; predates the dataset revision — re-measure)
 - [x] Explainable scoring and ranking
 - [x] Rubric self-audit — discrimination and dead weight
-- [x] Bias parity testing across matched pairs
-- [ ] Bias parity over LLM-extracted records, not ground truth
+- [x] Bias parity testing across matched pairs — score parity and extraction parity
+- [x] Persisted extractions, so downstream stages re-run without re-spending tokens
+- [x] Non-determinism floor measured — the pair difference is reproducible, not noise
+- [ ] Pin one model version to separate a name effect from name-mediated routing
+- [ ] More matched pairs — six cannot distinguish a direction from an accident
 - [ ] Human-in-the-loop override flow
 - [ ] Audit trail and decision logging
 - [ ] Failure-path tests and retry / idempotency

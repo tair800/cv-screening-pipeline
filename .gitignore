@@ -11,8 +11,9 @@ data/synthetic/
 *.pem
 secrets.json
 
-# Evaluation output — regenerate with src/evaluate.py; the numbers live in the README
+# Derived artefacts — regenerable; the measured numbers live in the README
 results_*.json
+data/extracted/
 
 # Python
 __pycache__/
