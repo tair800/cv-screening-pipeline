@@ -508,6 +508,64 @@ That is the honest state of it: the harness works, it found a reproducible incon
 on its first serious run, the cheap explanation has been eliminated, and the mechanism and
 the scale are both still open.
 
+## Human oversight and the audit trail
+
+The pipeline ranks; a person decides. `src/decisions.py` records that decision, and the
+design of the log is the whole point:
+
+```bash
+python src/decisions.py --cv cv_0058 --decision advance \
+    --actor recruiter@example.com \
+    --reason "claims-handling background is directly relevant; automation gap is trainable"
+```
+
+```
+AI Automation Engineer — 60 candidates, top 5
+
+  1. cv_0001  100.00  [hold by recruiter@example.com]
+  2. cv_0002  100.00
+  3. cv_0023  100.00
+```
+
+**Overrides annotate the ranking; they do not silently reorder it.** A recruiter who
+advances a candidate the pipeline scored at 37.5 should see the score *and* their own
+decision side by side. A list that quietly reshuffles hides the disagreement, and the
+disagreement is the most informative thing in the record.
+
+**The log is append-only.** A change of mind is a new entry, never an edit:
+
+```
+3 entries in decisions.jsonl
+
+  2026-08-11T16:00:30+00:00  cv_0058   advance  score 37.5  by recruiter@example.com
+      claims-handling background is directly relevant; automation gap is trainable
+  2026-08-11T16:00:45+00:00  cv_0058   reject   score 37.5  by hiring.manager@example.com
+      second review: automation experience is a hard requirement for this opening
+
+  1 entries superseded by a later decision (retained — the log is append-only)
+```
+
+The most recent entry is the effective decision; the superseded one stays. A log you can
+rewrite is a status field wearing an audit trail's clothes.
+
+**The score is snapshotted, not referenced.** Each entry stores the score *as it stood
+when the decision was made*, along with the role ID and the model in use. Weights change,
+models change, code changes — and without the value at the time, "the pipeline said 80"
+becomes an unverifiable claim and a past decision cannot be reconstructed. When a score
+later moves, the ranking says so explicitly: `score was 80.0 when decided`.
+
+**Two fields are mandatory and enforced, not merely requested.** An override with no
+stated reason is not reviewable, and a decision with no author cannot be audited, so
+`record()` refuses both rather than writing a hollow entry:
+
+```
+$ python src/decisions.py --cv cv_0002 --decision advance --actor x@example.com --reason "  "
+refused: a reason is required: an override with no stated reason is not reviewable
+```
+
+The log itself is git-ignored. It is a record of real decisions about real people and
+belongs in an access-controlled store with a retention policy, not in a repository.
+
 ## Repository layout
 
 ```
@@ -541,8 +599,8 @@ cv-screening-pipeline/
 - [x] Non-determinism floor measured — the pair difference is reproducible, not noise
 - [ ] Pin one model version to separate a name effect from name-mediated routing
 - [ ] More matched pairs — six cannot distinguish a direction from an accident
-- [ ] Human-in-the-loop override flow
-- [ ] Audit trail and decision logging
+- [x] Human-in-the-loop override flow
+- [x] Append-only audit trail with score snapshots
 - [ ] Failure-path tests and retry / idempotency
 - [ ] Metrics dashboard and results write-up
 

@@ -15,6 +15,10 @@ secrets.json
 results_*.json
 data/extracted/
 
+# The decision log is a record of real decisions about real people. It belongs in an
+# access-controlled store with a retention policy, not in a git repository.
+data/decisions.jsonl
+
 # Python
 __pycache__/
 *.py[cod]

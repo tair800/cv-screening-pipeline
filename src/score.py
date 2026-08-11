@@ -261,10 +261,25 @@ def main() -> None:
         print(json.dumps(ranking[:args.top], indent=2, ensure_ascii=False))
         return
 
+    from decisions import apply_overrides
+    ranking = apply_overrides(ranking)
+
     print(f"{role['title']} — {len(records)} candidates, top {args.top}\n")
     for position, result in enumerate(ranking[:args.top], start=1):
-        flag = "  ⚠ " + ",".join(result["unmet_must_haves"]) if result["unmet_must_haves"] else ""
-        print(f"{position:>3}. {result['cv_id']}  {result['score']:>6.2f}{flag}")
+        notes = []
+        if result["unmet_must_haves"]:
+            notes.append("⚠ " + ",".join(result["unmet_must_haves"]))
+        if result["decision"]:
+            notes.append(f"[{result['decision']} by {result['decided_by']}]")
+        if result["score_moved_since"]:
+            notes.append(f"score was {result['score_at_decision']} when decided")
+        suffix = "  " + "  ".join(notes) if notes else ""
+        print(f"{position:>3}. {result['cv_id']}  {result['score']:>6.2f}{suffix}")
+
+    decided = sum(1 for r in ranking if r["decision"])
+    if decided:
+        print(f"\n{decided} of {len(ranking)} candidates have a recorded decision "
+              f"(src/decisions.py --list)")
 
 
 if __name__ == "__main__":
