@@ -6,12 +6,12 @@
   "cvs": [
     {
       "cv_id": "cv_0001",
-      "layout": "verbose",
+      "layout": "compact",
       "bias_pair_id": "pair_01"
     },
     {
       "cv_id": "cv_0002",
-      "layout": "verbose",
+      "layout": "compact",
       "bias_pair_id": "pair_01"
     },
     {
@@ -36,22 +36,22 @@
     },
     {
       "cv_id": "cv_0007",
-      "layout": "compact",
+      "layout": "classic",
       "bias_pair_id": "pair_04"
     },
     {
       "cv_id": "cv_0008",
-      "layout": "compact",
+      "layout": "classic",
       "bias_pair_id": "pair_04"
     },
     {
       "cv_id": "cv_0009",
-      "layout": "verbose",
+      "layout": "classic",
       "bias_pair_id": "pair_05"
     },
     {
       "cv_id": "cv_0010",
-      "layout": "verbose",
+      "layout": "classic",
       "bias_pair_id": "pair_05"
     },
     {
@@ -71,22 +71,22 @@
     },
     {
       "cv_id": "cv_0014",
-      "layout": "classic",
-      "bias_pair_id": null
-    },
-    {
-      "cv_id": "cv_0015",
-      "layout": "classic",
-      "bias_pair_id": null
-    },
-    {
-      "cv_id": "cv_0016",
       "layout": "compact",
       "bias_pair_id": null
     },
     {
+      "cv_id": "cv_0015",
+      "layout": "compact",
+      "bias_pair_id": null
+    },
+    {
+      "cv_id": "cv_0016",
+      "layout": "classic",
+      "bias_pair_id": null
+    },
+    {
       "cv_id": "cv_0017",
-      "layout": "verbose",
+      "layout": "classic",
       "bias_pair_id": null
     },
     {
@@ -96,7 +96,7 @@
     },
     {
       "cv_id": "cv_0019",
-      "layout": "compact",
+      "layout": "verbose",
       "bias_pair_id": null
     },
     {
@@ -106,12 +106,12 @@
     },
     {
       "cv_id": "cv_0021",
-      "layout": "verbose",
+      "layout": "compact",
       "bias_pair_id": null
     },
     {
       "cv_id": "cv_0022",
-      "layout": "verbose",
+      "layout": "compact",
       "bias_pair_id": null
     },
     {
@@ -136,7 +136,7 @@
     },
     {
       "cv_id": "cv_0027",
-      "layout": "verbose",
+      "layout": "classic",
       "bias_pair_id": null
     },
     {
@@ -156,12 +156,12 @@
     },
     {
       "cv_id": "cv_0031",
-      "layout": "compact",
+      "layout": "classic",
       "bias_pair_id": null
     },
     {
       "cv_id": "cv_0032",
-      "layout": "verbose",
+      "layout": "classic",
       "bias_pair_id": null
     },
     {
@@ -176,12 +176,12 @@
     },
     {
       "cv_id": "cv_0035",
-      "layout": "compact",
+      "layout": "verbose",
       "bias_pair_id": null
     },
     {
       "cv_id": "cv_0036",
-      "layout": "verbose",
+      "layout": "classic",
       "bias_pair_id": null
     },
     {
@@ -201,7 +201,7 @@
     },
     {
       "cv_id": "cv_0040",
-      "layout": "verbose",
+      "layout": "classic",
       "bias_pair_id": null
     },
     {
@@ -211,12 +211,12 @@
     },
     {
       "cv_id": "cv_0042",
-      "layout": "verbose",
+      "layout": "classic",
       "bias_pair_id": null
     },
     {
       "cv_id": "cv_0043",
-      "layout": "classic",
+      "layout": "compact",
       "bias_pair_id": null
     },
     {
@@ -226,27 +226,27 @@
     },
     {
       "cv_id": "cv_0045",
-      "layout": "classic",
+      "layout": "verbose",
       "bias_pair_id": null
     },
     {
       "cv_id": "cv_0046",
-      "layout": "compact",
+      "layout": "verbose",
       "bias_pair_id": null
     },
     {
       "cv_id": "cv_0047",
-      "layout": "verbose",
+      "layout": "compact",
       "bias_pair_id": null
     },
     {
       "cv_id": "cv_0048",
-      "layout": "verbose",
+      "layout": "classic",
       "bias_pair_id": null
     },
     {
       "cv_id": "cv_0049",
-      "layout": "classic",
+      "layout": "compact",
       "bias_pair_id": null
     },
     {
@@ -256,12 +256,12 @@
     },
     {
       "cv_id": "cv_0051",
-      "layout": "classic",
+      "layout": "compact",
       "bias_pair_id": null
     },
     {
       "cv_id": "cv_0052",
-      "layout": "verbose",
+      "layout": "classic",
       "bias_pair_id": null
     },
     {
@@ -271,7 +271,7 @@
     },
     {
       "cv_id": "cv_0054",
-      "layout": "verbose",
+      "layout": "compact",
       "bias_pair_id": null
     },
     {
@@ -286,17 +286,17 @@
     },
     {
       "cv_id": "cv_0057",
-      "layout": "compact",
+      "layout": "verbose",
       "bias_pair_id": null
     },
     {
       "cv_id": "cv_0058",
-      "layout": "compact",
+      "layout": "verbose",
       "bias_pair_id": null
     },
     {
       "cv_id": "cv_0059",
-      "layout": "compact",
+      "layout": "classic",
       "bias_pair_id": null
     },
     {

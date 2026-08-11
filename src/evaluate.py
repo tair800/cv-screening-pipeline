@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import sys
 from collections import defaultdict
 from pathlib import Path
 
@@ -48,7 +49,8 @@ def evaluate(extractor_name: str, data_dir: Path, limit: int | None = None) -> d
     skill_hits = skill_false = skill_missed = 0
     experience_hits = 0
 
-    for cv_path in cv_files:
+    for position, cv_path in enumerate(cv_files, start=1):
+        print(f"  {position}/{len(cv_files)} {cv_path.stem}", file=sys.stderr, flush=True)
         text = cv_path.read_text(encoding="utf-8")
         truth = json.loads(cv_path.with_suffix(".json").read_text(encoding="utf-8"))
         try:

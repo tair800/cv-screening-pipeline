@@ -127,8 +127,14 @@ python src/check_connection.py
 python src/extract_llm.py data/samples/cv_0003.txt
 python src/evaluate.py --extractor llm --limit 5    # start small
 
-# 6. Failure-path tests (no key, no network)
+# 6. Score and rank — deterministic, no model call
+python src/score.py --top 10
+python src/score.py --explain cv_0021     # full point-by-point breakdown
+python src/score.py --audit               # does the rubric actually separate candidates?
+
+# 7. Tests (no key, no network)
 python tests/test_parse.py
+python tests/test_bias_parity.py
 ```
 
 ### Configuring a model
@@ -161,26 +167,26 @@ What step 1 produces:
 | `data/synthetic/cv_0001.json` | Ground truth — what extraction should return |
 | `data/synthetic/_manifest.json` | Dataset index and bias-pair register |
 
-## Results so far
+## Results
 
 The rule-based extractor is the baseline the LLM has to beat. Publishing its numbers
-first makes the later comparison honest: if an LLM cannot clear these, the extra cost,
-latency and non-determinism are not justified.
+first makes the comparison honest: if an LLM cannot clear these, the extra cost, latency
+and non-determinism are not justified.
 
-Measured on 60 synthetic CVs, seed 42:
+### The baseline alone, over the full dataset
+
+60 synthetic CVs, seed 42:
 
 | Metric | Baseline (rules) |
 |---|---|
 | Schema-valid records | 60 / 60 |
 | Hallucinated skills | 0 |
-| Name | 100% |
-| Email / phone | 100% |
-| Years of experience | 100% |
-| **Location** | **67%** |
-| Skills — recall / precision | 100% / 98.7% |
-| **Work history (entry count)** | **35%** |
+| Name · email · phone · years | 100% |
+| **Location** | **82%** |
+| Skills — recall / precision | 100% / 98.8% |
+| **Work history (entry count)** | **43%** |
 
-Broken down by CV layout, the pattern is unambiguous:
+By CV layout, the pattern is unambiguous:
 
 | Layout | CVs | Work history correct |
 |---|---|---|
@@ -188,15 +194,41 @@ Broken down by CV layout, the pattern is unambiguous:
 | `compact` — inlined facts | 21 | **19%** |
 | `verbose` — facts in prose | 24 | **8%** |
 
-**Reading the result.** Rules are excellent at closed vocabularies and fixed formats —
-a skill list and an email address are pattern-matching problems, and pattern matching
-solves them perfectly and for free. Rules collapse on *structure*: work history is only
-recovered when the CV already presents it as `Role — Company (2022 - Present)`. The
-location errors have the same cause; the pattern has no idea what a place is, so it
-happily returns `Science, Technical University of Munich`.
+Rules are excellent at closed vocabularies and fixed formats — a skill list and an email
+address are pattern-matching problems, and pattern matching solves them perfectly and for
+free. Rules collapse on *structure*: work history is recovered only when the CV already
+presents it as `Role — Company (2022 - Present)`. The location errors share the cause —
+the pattern has no concept of a place, so it happily returns
+`Science, Technical University of Munich`.
 
-That gap is the actual case for an LLM, and it is now a measured gap rather than an
-assumption.
+### Head to head
+
+Both extractors over the same first 5 CVs (`--limit 5`), against a free model behind a
+multi-provider gateway:
+
+> ⚠️ These figures were measured **before** the dataset revision described under
+> [Scoring](#the-rubric-audits-itself), which changed how skills are distributed. The
+> direction of the gap still holds; the exact numbers need re-measuring.
+
+| Metric | Baseline | LLM |
+|---|---|---|
+| Schema-valid records | 5 / 5 | 5 / 5 |
+| Hallucinated skills | 0 | 0 |
+| Name · email · phone · years | 100% | 100% |
+| Skills — recall / precision | 100% / 100% | 100% / 100% |
+| **Location** | 60% | **100%** |
+| **Work history (entry count)** | 20% | **100%** |
+
+**Reading the result.** The LLM wins exactly where the measured gap predicted it would —
+structure and free-text location — and ties everywhere the rules were already perfect. It
+does not win *generally*; it wins *specifically*. On a closed skill vocabulary the rules
+match it at zero cost and zero latency, which is a result worth stating plainly rather
+than hiding: the case for the LLM is the two rows where rules collapse, not the whole table.
+
+> **Sample size.** The head-to-head is n=5 — enough to confirm the direction of the gap,
+> not enough to separate 95% from 100%. The baseline column of the full 60-CV run is the
+> more reliable of the two. Re-running the LLM over the full dataset is the obvious next
+> measurement.
 
 ### How the LLM extractor is constrained
 
@@ -255,14 +287,127 @@ stage as the wrong type, every job would have been missing `role`, and the failu
 have surfaced far from its cause — or worse, not at all.
 
 **Silent non-enforcement is more dangerous than rejection**, because rejection is a signal
-and silence is not. So the extractor validates its own output rather than trusting the
-transport: on violation it feeds the specific errors back and asks for a corrected record,
-once. In the run above that took 13 violations to 0, with no loss of extracted content.
+and silence is not. Two things follow, and the second was learned the expensive way.
+
+**The extractor validates its own output** rather than trusting the transport. On
+violation it feeds the specific errors back and asks for a corrected record, once. A
+single-CV trial took 13 violations to 0 — which looked like a fix, and was not: over ten
+CVs only **1 in 10** records came back valid. One passing sample proved nothing, and the
+evaluation harness was what said so.
+
+**The schema goes in the prompt on every call**, not only in the fallback tiers. The
+original design injected it only when `json_schema` was unavailable — but the endpoint
+*claimed* that mode, so the schema was never sent, and the model invented field names it
+had no way to know (`title` for `role`, `graduation_year` for `year`). Writing the request
+to be correct whether or not the transport enforces anything took schema validity from
+**1/10 to 5/5**, with the repair pass no longer firing at all.
 
 **The guarantees do not live in the API call.** `validate_record()` checks shape and
 `verify_evidence()` checks for invention, and both run identically whichever tier served
 the request — or claimed to. A pipeline whose correctness depends on a provider being
 generous is a pipeline that breaks the first time it moves.
+
+## Scoring: the model extracts, the code decides
+
+Ranking is plain Python over the extracted record — no model call. The same record and
+role always produce the same score, and every point traces back to a named requirement
+and, when the record came from extraction, to the CV span that satisfied it:
+
+```
+cv_0021 — 80.0 / 100
+
+   20.00 / 20  Python (must-have)
+         satisfied by Python
+   20.00 / 20  Workflow automation platform (must-have)
+         satisfied by UiPath
+   15.00 / 15  REST API integration (must-have)
+         satisfied by JSON
+    0.00 / 20  LLM / GenAI experience
+         not stated: none of OpenAI API, Prompt engineering, RAG, LangChain, Hugging Face, Dataiku
+   10.00 / 10  Data handling
+         satisfied by SQL, PostgreSQL, MongoDB
+   15.00 / 15  Relevant experience
+         3 of 2 target years
+```
+
+Handing the ranking to the model as well would have been less work and would have
+produced a system whose output could not be explained to a candidate, a recruiter, or an
+auditor. This is the seam the whole design turns on.
+
+**Name-blindness is structural, not documentary.** `scorable_view()` allow-lists the
+fields a score may depend on — years, skills, roles, degree, field, graduation year.
+A field that is not on that list cannot reach the scorer at all, so no later edit can
+accidentally make a score depend on a name, a contact detail, a location, or an
+institution. Documenting the exclusion would not have survived the first refactor.
+
+### The rubric audits itself
+
+A rubric can be arithmetically correct and still useless. `--audit` measures whether it
+separates candidates at all, and the first run said it did not:
+
+```
+distinct scores  11
+tied at top      29 at 100.0
+dead weight      20 of 100 points score everyone the same
+```
+
+Forty-eight percent of the field tied at the ceiling, which means the "top 10" was
+ordered by the tie-break — the `cv_id` — and not by the rubric. The single worst offender
+was **Workflow automation platform, awarded to 60 of 60 candidates**: twenty points spent
+identically on everyone, carrying no information whatsoever.
+
+Two separate causes, both real:
+
+**The dataset was unrealistic for ranking.** The generator gave every candidate at least
+one automation platform by construction. That was fine for its original purpose — stress
+testing extraction across layouts — but an applicant pool in which every candidate holds
+the required skill cannot be ranked. Skill families are now gated on probability as well
+as seniority.
+
+**The audit metric itself was wrong.** It counted candidates scoring above zero, which is
+meaningless for a curve-scored requirement: partial credit means nearly everyone scores
+above zero while the requirement may still separate them perfectly. It now measures the
+share receiving the *most common* award — a requirement that scores 95% of candidates
+identically is dead weight regardless of what that score is.
+
+After both fixes:
+
+| | Before | After |
+|---|---|---|
+| Distinct scores | 11 | 13 |
+| Tied at top | 29 | 10 |
+| Dead weight | 20 / 100 | **0 / 100** |
+| Score range | 35 – 100 | 37.5 – 100 |
+
+**A limitation that remains.** Ten candidates still tie at 100. Binary skill matching
+cannot separate people who hold every requirement — depth would need signals this dataset
+does not carry (years per skill, seniority of roles, project scale). The honest position
+is that this rubric produces a defensible *band*, not a defensible ordering, at the top
+of the range.
+
+### Bias parity
+
+Each matched pair shares one qualifications record, one layout and one location; only the
+name differs. Two candidates differing only by name must score identically.
+
+```
+matched pairs: 6   source: synthetic
+
+   ok   pair_01  cv_0001 100.00   cv_0002 100.00   delta +0.00
+   ok   pair_02  cv_0003  80.00   cv_0004  80.00   delta +0.00
+   ok   pair_03  cv_0005  50.00   cv_0006  50.00   delta +0.00
+   ok   pair_04  cv_0007  80.00   cv_0008  80.00   delta +0.00
+   ok   pair_05  cv_0009  80.00   cv_0010  80.00   delta +0.00
+   ok   pair_06  cv_0011  80.00   cv_0012  80.00   delta +0.00
+
+all 6 pairs scored identically — no disparate treatment detected
+```
+
+The test exits non-zero on any gap, so it can gate a change. Passing here is expected
+rather than impressive — the allow-list makes it structural — and that is the point: the
+test exists to catch the day someone widens the allow-list. Running the same test over
+LLM-extracted records rather than ground truth tests the *pipeline* instead of the
+scorer, and is the more interesting measurement still outstanding.
 
 ## Repository layout
 
@@ -289,10 +434,12 @@ cv-screening-pipeline/
 - [x] LLM structured extraction against the same schema
 - [x] Provider-agnostic configuration + connection diagnostic
 - [x] Local validation with a single self-repair pass
-- [ ] Measured LLM-vs-baseline comparison
-- [ ] Explainable scoring and ranking
+- [x] Measured LLM-vs-baseline comparison (n=5; predates the dataset revision — re-measure)
+- [x] Explainable scoring and ranking
+- [x] Rubric self-audit — discrimination and dead weight
+- [x] Bias parity testing across matched pairs
+- [ ] Bias parity over LLM-extracted records, not ground truth
 - [ ] Human-in-the-loop override flow
-- [ ] Bias parity testing across matched pairs
 - [ ] Audit trail and decision logging
 - [ ] Failure-path tests and retry / idempotency
 - [ ] Metrics dashboard and results write-up

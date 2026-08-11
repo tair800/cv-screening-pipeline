@@ -13,6 +13,7 @@ import argparse
 import json
 import os
 import re
+import sys
 from pathlib import Path
 
 from openai import OpenAI
@@ -46,6 +47,11 @@ class ExtractionError(RuntimeError):
     pass
 
 
+def _log(message: str) -> None:
+    """Progress goes to stderr so stdout stays a clean JSON stream."""
+    print(f"[extract_llm] {message}", file=sys.stderr, flush=True)
+
+
 _client: OpenAI | None = None
 _mode: str | None = None
 
@@ -56,12 +62,12 @@ def _connect() -> OpenAI:
     key = os.environ.get("LLM_API_KEY")
     if not key:
         raise ExtractionError("LLM_API_KEY is not set — see .env and run src/check_connection.py")
-    # timeout and max_retries multiply into the worst-case wait per CV — 60s x 2 attempts
-    # here. Left low enough that a stalled endpoint surfaces during a batch run.
+    # timeout and max_retries multiply into the worst-case wait per call. A repair doubles
+    # the calls again, so a CV can take 4x this in the worst case.
     return OpenAI(
         base_url=os.environ.get("LLM_BASE_URL", DEFAULT_BASE_URL),
         api_key=key,
-        timeout=60.0,
+        timeout=float(os.environ.get("LLM_TIMEOUT", "120")),
         max_retries=1,
     )
 
@@ -88,14 +94,30 @@ def _parse(payload: str) -> dict:
     return json.loads(payload[start:end + 1])
 
 
+def _schema_prompt() -> str:
+    """The schema goes in the prompt on every call, not only in the fallback tiers.
+
+    An endpoint can accept `response_format: json_schema` and still not honour it, and it
+    does not say which it is doing — so the request is written to be correct whether or
+    not the transport enforces anything."""
+    return (
+        "\n\nThe object must match this JSON Schema exactly. Use these field names and "
+        "types and no others — do not rename, add, or omit a field:\n"
+        + json.dumps(api_schema(), separators=(",", ":"))
+    )
+
+
 def _call(model: str, messages: list[dict]) -> str:
     """Send one request, negotiating schema enforcement downward on the first call."""
     global _mode
     modes = [_mode] if _mode else ["json_schema", "json_object", "none"]
     last_error: Exception | None = None
 
+    payload = list(messages)
+    payload[0] = {**payload[0], "content": payload[0]["content"] + _schema_prompt()}
+
     for mode in modes:
-        kwargs = {"model": model, "messages": messages, "temperature": 0}
+        kwargs = {"model": model, "messages": payload, "temperature": 0}
         response_format = _response_format(mode)
         if response_format:
             kwargs["response_format"] = response_format
@@ -107,7 +129,7 @@ def _call(model: str, messages: list[dict]) -> str:
 
         if _mode != mode:
             _mode = mode
-            print(f"[extract_llm] schema enforcement requested: {mode}", flush=True)
+            _log(f"schema enforcement requested: {mode}")
         return response.choices[0].message.content or ""
 
     raise ExtractionError(f"every request mode failed. Last error: {last_error}")
@@ -135,19 +157,23 @@ def extract(cv_id: str, text: str, model: str | None = None) -> dict:
     if not errors:
         return record
 
-    print(f"[extract_llm] {cv_id}: {len(errors)} schema violations, repairing", flush=True)
+    _log(f"{cv_id}: {len(errors)} schema violations, repairing")
     messages += [
         {"role": "assistant", "content": json.dumps(record, ensure_ascii=False)},
         {"role": "user", "content":
             "That record does not match the required schema:\n"
             + "\n".join(f"- {e}" for e in errors)
             + "\n\nReturn the same extracted information as a corrected JSON object. "
-              "Use exactly the field names and types the schema requires. Do not drop "
-              "or invent any information while correcting the shape."},
+              "Keep every value you already extracted; change only names and types so "
+              "they match the schema. Do not drop or invent information."},
     ]
 
     repaired = _parse(_call(model, messages))
     repaired["cv_id"] = cv_id
+
+    remaining = validate_record(repaired)
+    if remaining:
+        _log(f"{cv_id}: {len(remaining)} violations remain after repair")
     return repaired
 
 

@@ -11,6 +11,9 @@ data/synthetic/
 *.pem
 secrets.json
 
+# Evaluation output — regenerate with src/evaluate.py; the numbers live in the README
+results_*.json
+
 # Python
 __pycache__/
 *.py[cod]

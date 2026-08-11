@@ -24,7 +24,7 @@
     {
       "id": "req_api",
       "label": "REST API integration",
-      "type": "skill",
+      "type": "skill_any_of",
       "weight": 15,
       "must_have": true,
       "accepted_evidence": ["REST APIs", "JSON"]

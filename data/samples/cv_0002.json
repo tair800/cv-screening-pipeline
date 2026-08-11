@@ -6,64 +6,53 @@
   "location": "Baku, Azerbaijan",
   "years_experience": 10,
   "skills": [
+    "Airflow",
     "Azure",
-    "Hugging Face",
-    "Make",
+    "Dataiku",
+    "LangChain",
+    "OpenAI API",
+    "PostgreSQL",
     "Python",
-    "REST APIs",
-    "Snowflake"
+    "REST APIs"
   ],
   "experience": [
     {
-      "company": "Northwind Logistics",
-      "role": "Automation Engineer",
-      "start_year": 2022,
+      "company": "Orbit Manufacturing",
+      "role": "RPA Developer",
+      "start_year": 2024,
       "end_year": null
     },
     {
-      "company": "Corvus Analytics",
-      "role": "RPA Developer",
-      "start_year": 2021,
-      "end_year": 2022
-    },
-    {
-      "company": "Corvus Analytics",
-      "role": "Business Analyst",
+      "company": "Vela Financial",
+      "role": "Automation Engineer",
       "start_year": 2020,
-      "end_year": 2021
+      "end_year": 2024
     },
     {
-      "company": "Lumen Telecom",
-      "role": "Integration Engineer",
+      "company": "Orbit Manufacturing",
+      "role": "AI Engineer",
       "start_year": 2018,
       "end_year": 2020
     },
     {
       "company": "Meridian Retail",
-      "role": "Business Analyst",
-      "start_year": 2017,
-      "end_year": 2018
-    },
-    {
-      "company": "Vela Financial",
-      "role": "Backend Developer",
+      "role": "RPA Developer",
       "start_year": 2016,
-      "end_year": 2017
+      "end_year": 2018
     }
   ],
   "education": {
-    "degree": "MSc",
-    "field": "Software Engineering",
+    "degree": "BA",
+    "field": "Computer Science",
     "institution": "Technical University of Munich",
-    "year": 2016
+    "year": 2015
   },
   "languages": [
-    "English (B2)",
-    "German (B1)",
+    "Turkish (native)",
     "Polish (native)"
   ],
   "_meta": {
-    "layout": "verbose",
+    "layout": "compact",
     "dropped_fields": [],
     "bias_pair_id": "pair_01",
     "bias_variant": "B",

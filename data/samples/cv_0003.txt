@@ -1,9 +1,9 @@
-Marta Weber
-marta.weber@example.com / +49 156 6279418 / Tallinn, Estonia
+Julia Lindqvist
+julia.lindqvist@example.com / +49 167 4684531 / Baku, Azerbaijan
 
-Experience (10 yrs): AI Engineer at Lumen Telecom (2023 - Present); AI Engineer at Halcyon Health (2021 - 2023); Data Analyst at Vela Financial (2019 - 2021); Backend Developer at Corvus Analytics (2017 - 2019); Integration Engineer at Orbit Manufacturing (2016 - 2017)
+Experience (10 yrs): Software Engineer at Vela Financial (2022 - Present); AI Engineer at Meridian Retail (2019 - 2022); Integration Engineer at Corvus Analytics (2016 - 2019)
 
-Tech: Airflow | JSON | PostgreSQL | Python | RAG | REST APIs | SQL | Terraform
+Tech: JSON | Python | REST APIs | SQL | Zapier
 
-Education: MSc Mathematics — Warsaw University of Technology (2016)
-Languages: English (C1), Polish (native)
+Education: BSc Industrial Engineering — Instituto Superior Técnico (2016)
+Languages: German (B1), Russian (C1)

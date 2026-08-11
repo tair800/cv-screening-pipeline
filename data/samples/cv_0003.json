@@ -1,61 +1,46 @@
 {
   "cv_id": "cv_0003",
-  "name": "Marta Weber",
-  "email": "marta.weber@example.com",
-  "phone": "+49 156 6279418",
-  "location": "Tallinn, Estonia",
+  "name": "Julia Lindqvist",
+  "email": "julia.lindqvist@example.com",
+  "phone": "+49 167 4684531",
+  "location": "Baku, Azerbaijan",
   "years_experience": 10,
   "skills": [
-    "Airflow",
     "JSON",
-    "PostgreSQL",
     "Python",
-    "RAG",
     "REST APIs",
     "SQL",
-    "Terraform"
+    "Zapier"
   ],
   "experience": [
     {
-      "company": "Lumen Telecom",
-      "role": "AI Engineer",
-      "start_year": 2023,
+      "company": "Vela Financial",
+      "role": "Software Engineer",
+      "start_year": 2022,
       "end_year": null
     },
     {
-      "company": "Halcyon Health",
+      "company": "Meridian Retail",
       "role": "AI Engineer",
-      "start_year": 2021,
-      "end_year": 2023
-    },
-    {
-      "company": "Vela Financial",
-      "role": "Data Analyst",
       "start_year": 2019,
-      "end_year": 2021
+      "end_year": 2022
     },
     {
       "company": "Corvus Analytics",
-      "role": "Backend Developer",
-      "start_year": 2017,
-      "end_year": 2019
-    },
-    {
-      "company": "Orbit Manufacturing",
       "role": "Integration Engineer",
       "start_year": 2016,
-      "end_year": 2017
+      "end_year": 2019
     }
   ],
   "education": {
-    "degree": "MSc",
-    "field": "Mathematics",
-    "institution": "Warsaw University of Technology",
+    "degree": "BSc",
+    "field": "Industrial Engineering",
+    "institution": "Instituto Superior Técnico",
     "year": 2016
   },
   "languages": [
-    "English (C1)",
-    "Polish (native)"
+    "German (B1)",
+    "Russian (C1)"
   ],
   "_meta": {
     "layout": "compact",

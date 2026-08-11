@@ -1,9 +1,9 @@
-My name is Anna Lindqvist and I am based in Baku, Azerbaijan. Over the past 10 years I have worked mainly on automation and data integration problems, most recently as Automation Engineer at Northwind Logistics.
+Anna Lindqvist
+anna.lindqvist@example.com / +49 164 9996414 / Baku, Azerbaijan
 
-Between 2022 and now I worked as Automation Engineer at Northwind Logistics. Between 2021 and 2022 I worked as RPA Developer at Corvus Analytics. Between 2020 and 2021 I worked as Business Analyst at Corvus Analytics. Between 2018 and 2020 I worked as Integration Engineer at Lumen Telecom. Between 2017 and 2018 I worked as Business Analyst at Meridian Retail. Between 2016 and 2017 I worked as Backend Developer at Vela Financial.
+Experience (10 yrs): RPA Developer at Orbit Manufacturing (2024 - Present); Automation Engineer at Vela Financial (2020 - 2024); AI Engineer at Orbit Manufacturing (2018 - 2020); RPA Developer at Meridian Retail (2016 - 2018)
 
-Day to day I work with Azure, Hugging Face, Make, Python, REST APIs and Snowflake.
+Tech: Airflow | Azure | Dataiku | LangChain | OpenAI API | PostgreSQL | Python | REST APIs
 
-I hold a MSc in Software Engineering from Technical University of Munich, completed in 2016. I speak English (B2), German (B1), Polish (native).
-
-You can reach me at anna.lindqvist@example.com or on +49 164 9996414.
+Education: BA Computer Science — Technical University of Munich (2015)
+Languages: Turkish (native), Polish (native)

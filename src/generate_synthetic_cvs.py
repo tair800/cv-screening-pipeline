@@ -69,13 +69,17 @@ def build_qualifications(rng: random.Random) -> dict:
     matched pair can share one qualifications record across two names."""
     years = rng.randint(0, 12)
 
+    # Each family is gated on probability as well as seniority. An applicant pool in
+    # which every candidate holds the required skill cannot be ranked — the requirement
+    # awards the same points to everyone and only the tie-break orders the result.
     skills = rng.sample(CORE_SKILLS, k=rng.randint(2, len(CORE_SKILLS)))
-    skills += rng.sample(AUTOMATION_SKILLS, k=rng.randint(1, 3))
-    if years >= 2:
+    if rng.random() < 0.60:
+        skills += rng.sample(AUTOMATION_SKILLS, k=rng.randint(1, 2))
+    if years >= 2 and rng.random() < 0.55:
         skills += rng.sample(AI_SKILLS, k=rng.randint(1, 3))
-    if years >= 3:
+    if years >= 3 and rng.random() < 0.65:
         skills += rng.sample(DATA_SKILLS, k=rng.randint(1, 2))
-    if years >= 5:
+    if years >= 5 and rng.random() < 0.70:
         skills += rng.sample(OPS_SKILLS, k=rng.randint(1, 2))
     skills = sorted(set(skills))
 
