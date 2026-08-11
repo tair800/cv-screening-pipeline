@@ -1,0 +1,21 @@
+{
+  "note": "Surface forms that denote the same skill. Kept deliberately narrow: every entry is an assertion that two names mean the same competence, and that assertion has to survive a reviewer asking why. This is the auditable alternative to a similarity threshold — 'PostgreSQL and Postgres are the same product, here is the list' can be defended to a rejected candidate; '0.87 cosine similarity' cannot.",
+  "not_aliases": "Dialects and adjacent-but-distinct tools are deliberately absent. T-SQL is not SQL-the-skill for scoring purposes, LangGraph is not LangChain, and JSON Schema is not JSON. Widening this file is a scoring change and should be reviewed as one.",
+  "aliases": {
+    "Python": ["Python3", "Python 3", "python"],
+    "PostgreSQL": ["Postgres", "psql", "Postgre SQL", "PostgresSQL"],
+    "MongoDB": ["Mongo"],
+    "REST APIs": ["REST API", "RESTful API", "RESTful APIs", "REST", "HTTP API", "HTTP APIs"],
+    "OpenAI API": ["OpenAI", "OpenAI SDK", "GPT API"],
+    "Prompt engineering": ["Prompting", "Prompt design", "Prompt-engineering"],
+    "RAG": ["Retrieval-Augmented Generation", "Retrieval Augmented Generation"],
+    "LangChain": ["Langchain", "lang chain"],
+    "Hugging Face": ["HuggingFace", "Hugging-Face"],
+    "Power Automate": ["Microsoft Power Automate", "MS Power Automate", "PowerAutomate"],
+    "UiPath": ["Ui Path", "UI Path"],
+    "Airflow": ["Apache Airflow"],
+    "Pandas": ["pandas"],
+    "dbt": ["DBT", "data build tool"],
+    "n8n": ["n8n.io"]
+  }
+}

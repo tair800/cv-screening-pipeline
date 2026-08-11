@@ -16,6 +16,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_ROLE = ROOT / "data" / "role_ai_automation_engineer.json"
+DEFAULT_ALIASES = ROOT / "data" / "skill_aliases.json"
 
 SCORABLE_FIELDS = ("years_experience", "skills", "experience", "education")
 SCORABLE_EDUCATION_FIELDS = ("degree", "field", "year")
@@ -31,6 +32,27 @@ def load_role(path: Path) -> dict:
     if total != 100:
         raise RoleError(f"{path.name}: weights sum to {total}, expected 100")
     return role
+
+
+def load_aliases(path: Path = DEFAULT_ALIASES) -> dict[str, str]:
+    """Map every accepted surface form, lowercased, to its canonical skill name.
+
+    Exact string matching drops a real skill because the model wrote `Postgres` where the
+    role says `PostgreSQL`. The fix is an explicit equivalence list rather than embedding
+    similarity: a list can be shown to a candidate and argued with, a threshold cannot."""
+    if not path.exists():
+        return {}
+    data = json.loads(path.read_text(encoding="utf-8"))
+    mapping: dict[str, str] = {}
+    for canonical, surfaces in data.get("aliases", {}).items():
+        mapping[canonical.lower()] = canonical
+        for surface in surfaces:
+            mapping[surface.lower()] = canonical
+    return mapping
+
+
+def canonical(name: str, aliases: dict[str, str]) -> str:
+    return aliases.get(name.strip().lower(), name.strip())
 
 
 def scorable_view(record: dict) -> dict:
@@ -58,17 +80,24 @@ def _skills(view: dict) -> list[tuple[str, str | None]]:
     return [(name, evidence) for name, evidence in pairs if name]
 
 
-def _match(requirement: dict, skills: list[tuple[str, str | None]]) -> list[dict]:
-    wanted = [w.lower() for w in requirement["accepted_evidence"]]
-    held = {name.lower(): (name, evidence) for name, evidence in skills}
-    return [
-        {"skill": held[w][0], "evidence": held[w][1]}
-        for w in wanted
-        if w in held
-    ]
+def _match(requirement: dict, skills: list[tuple[str, str | None]],
+           aliases: dict[str, str]) -> list[dict]:
+    """Match on canonical names, and report the surface form that was actually written so
+    an alias-driven match is visible in the explanation rather than silent."""
+    wanted = {canonical(w, aliases) for w in requirement["accepted_evidence"]}
+    matched: dict[str, dict] = {}
+    for name, evidence in skills:
+        canon = canonical(name, aliases)
+        if canon in wanted and canon not in matched:
+            matched[canon] = {
+                "skill": canon,
+                "written_as": name if name != canon else None,
+                "evidence": evidence,
+            }
+    return list(matched.values())
 
 
-def _score_requirement(requirement: dict, view: dict) -> dict:
+def _score_requirement(requirement: dict, view: dict, aliases: dict[str, str]) -> dict:
     weight = requirement["weight"]
     line = {
         "requirement": requirement["id"],
@@ -83,12 +112,18 @@ def _score_requirement(requirement: dict, view: dict) -> dict:
     kind = requirement["type"]
 
     if kind in ("skill", "skill_any_of"):
-        matched = _match(requirement, _skills(view))
+        matched = _match(requirement, _skills(view), aliases)
         line["matched"] = matched
-        needed = len(requirement["accepted_evidence"]) if kind == "skill" else 1
+        needed = (
+            len({canonical(w, aliases) for w in requirement["accepted_evidence"]})
+            if kind == "skill" else 1
+        )
         if len(matched) >= needed:
             line["awarded"] = float(weight)
-            line["reason"] = "satisfied by " + ", ".join(m["skill"] for m in matched)
+            line["reason"] = "satisfied by " + ", ".join(
+                f"{m['skill']} (written as {m['written_as']})" if m["written_as"] else m["skill"]
+                for m in matched
+            )
         else:
             line["reason"] = (
                 "not stated: none of " + ", ".join(requirement["accepted_evidence"])
@@ -112,9 +147,11 @@ def _score_requirement(requirement: dict, view: dict) -> dict:
     raise RoleError(f"unknown requirement type: {kind}")
 
 
-def score(record: dict, role: dict) -> dict:
+def score(record: dict, role: dict, aliases: dict[str, str] | None = None) -> dict:
     view = scorable_view(record)
-    breakdown = [_score_requirement(r, view) for r in role["requirements"]]
+    if aliases is None:
+        aliases = load_aliases()
+    breakdown = [_score_requirement(r, view, aliases) for r in role["requirements"]]
     awarded = round(sum(line["awarded"] for line in breakdown), 2)
 
     return {
@@ -130,9 +167,11 @@ def score(record: dict, role: dict) -> dict:
     }
 
 
-def rank(records: list[dict], role: dict) -> list[dict]:
+def rank(records: list[dict], role: dict, aliases: dict[str, str] | None = None) -> list[dict]:
     """Rank highest first. Ties break on cv_id so the order is reproducible."""
-    scored = [score(record, role) for record in records]
+    if aliases is None:
+        aliases = load_aliases()
+    scored = [score(record, role, aliases) for record in records]
     return sorted(scored, key=lambda s: (-s["score"], s["cv_id"] or ""))
 
 

@@ -134,6 +134,7 @@ python src/score.py --audit               # does the rubric actually separate ca
 
 # 7. Tests (no key, no network)
 python tests/test_parse.py
+python tests/test_alias_matching.py
 python tests/test_bias_parity.py
 
 # 8. Parity over real extractions rather than ground truth — this is the harder test
@@ -346,6 +347,49 @@ fields a score may depend on — years, skills, roles, degree, field, graduation
 A field that is not on that list cannot reach the scorer at all, so no later edit can
 accidentally make a score depend on a name, a contact detail, a location, or an
 institution. Documenting the exclusion would not have survived the first refactor.
+
+### Why there is no embedding model here
+
+Matching an extracted skill to a requirement is a similarity problem, and the reflex
+answer is embeddings — encode both sides, threshold the cosine distance. This pipeline
+deliberately does not, and the reason is the same one that put scoring in code rather than
+in the model.
+
+A retrieval score cannot be explained to the person it rejected. *"You scored 0.73"* is
+not a reason; it is a number that happens to be attached to one. Under EU AI Act Annex III
+the system has to be able to say **which requirement was met, by what evidence** — and a
+threshold answers neither question.
+
+Exact string matching has a real failure mode, though: the model writes `Postgres` where
+the role says `PostgreSQL`, and a skill the candidate genuinely holds silently scores
+zero. The fix is an explicit equivalence list in `data/skill_aliases.json`:
+
+| Approach | Can it be defended in review? |
+|---|---|
+| **Alias list** — `"PostgreSQL": ["Postgres", "psql"]` | Yes: *these are names for the same product, here is the list* |
+| **Embedding similarity** — `cosine > 0.85` | No: *0.87, therefore a match* |
+
+Both fix the brittleness. Only one survives a candidate asking why.
+
+The list stays narrow on purpose, because **an over-broad alias is the worse failure**: a
+missed alias costs a candidate points they earned and shows up as a low score someone can
+question, while a wrong alias awards points for a skill they do not have and is invisible.
+So `T-SQL` is not `SQL`, `LangGraph` is not `LangChain`, and `JSON Schema` is not `JSON`.
+`tests/test_alias_matching.py` pins both directions — twelve forms that must canonicalise
+and five near-misses that must not.
+
+When an alias does fire, the explanation says so rather than quietly normalising:
+
+```
+   15.00 / 15  REST API integration (must-have)
+         satisfied by REST APIs (written as REST API)
+```
+
+Where semantic judgement *is* needed — deciding that *"built and maintained workflows in
+n8n"* describes the skill `n8n` — the LLM already did it during extraction, and returned
+the source span as evidence. An embedding would have produced a number instead. The
+project needs one model key and no vector store; that is a consequence of the design, not
+a limitation of it.
 
 ### The rubric audits itself
 
@@ -593,6 +637,7 @@ cv-screening-pipeline/
 - [x] Local validation with a single self-repair pass
 - [x] Measured LLM-vs-baseline comparison (n=5; predates the dataset revision — re-measure)
 - [x] Explainable scoring and ranking
+- [x] Auditable skill aliases instead of embedding similarity
 - [x] Rubric self-audit — discrimination and dead weight
 - [x] Bias parity testing across matched pairs — score parity and extraction parity
 - [x] Persisted extractions, so downstream stages re-run without re-spending tokens
