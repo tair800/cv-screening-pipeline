@@ -16,14 +16,42 @@ from schema import validate_record, verify_evidence
 
 SIMPLE_FIELDS = ["name", "email", "phone", "location", "years_experience"]
 
+# Compared case-insensitively: the classic layout prints the name as an ALL-CAPS header and a
+# faithful extractor echoes it, so an exact-match test scores formatting rather than identity.
+CASE_INSENSITIVE_FIELDS = {"name", "email", "location"}
 
-def _load_extractor(name: str):
+
+def _field_match(field: str, predicted, truth) -> bool:
+    if field in CASE_INSENSITIVE_FIELDS and isinstance(predicted, str) and isinstance(truth, str):
+        return predicted.strip().casefold() == truth.strip().casefold()
+    return predicted == truth
+
+
+def _stored_extractor(records_dir: Path):
+    """Read a persisted extraction instead of calling the model again.
+
+    Re-running a 60-CV evaluation against the API costs tokens and returns a slightly
+    different answer each time. Scoring what was actually written makes the reported
+    numbers reproducible by anyone holding the same records."""
+
+    def extract(cv_id: str, _text: str) -> dict:
+        path = records_dir / f"{cv_id}.json"
+        if not path.exists():
+            raise FileNotFoundError(f"no stored extraction for {cv_id} in {records_dir}")
+        return json.loads(path.read_text(encoding="utf-8"))
+
+    return extract
+
+
+def _load_extractor(name: str, records_dir: Path):
     if name == "baseline":
         from extract_baseline import extract
         return extract
     if name == "llm":
         from extract_llm import extract
         return extract
+    if name == "stored":
+        return _stored_extractor(records_dir)
     raise SystemExit(f"unknown extractor: {name}")
 
 
@@ -34,8 +62,15 @@ def _skill_scores(predicted: dict, truth: dict) -> tuple[int, int, int]:
     return hits, len(predicted_skills) - hits, len(true_skills) - hits
 
 
-def evaluate(extractor_name: str, data_dir: Path, limit: int | None = None) -> dict:
-    extract = _load_extractor(extractor_name)
+def evaluate(
+    extractor_name: str,
+    data_dir: Path,
+    limit: int | None = None,
+    records_dir: Path | None = None,
+) -> dict:
+    extract = _load_extractor(
+        extractor_name, records_dir or data_dir.parent / "extracted"
+    )
 
     cv_files = sorted(data_dir.glob("cv_*.txt"))
     if not cv_files:
@@ -68,7 +103,7 @@ def evaluate(extractor_name: str, data_dir: Path, limit: int | None = None) -> d
             hallucinations.append((cv_path.stem, invented))
 
         for field in SIMPLE_FIELDS:
-            if predicted.get(field) == truth.get(field):
+            if _field_match(field, predicted.get(field), truth.get(field)):
                 field_hits[field] += 1
 
         hits, false_positives, missed = _skill_scores(predicted, truth)
@@ -81,7 +116,9 @@ def evaluate(extractor_name: str, data_dir: Path, limit: int | None = None) -> d
 
         layout = truth.get("_meta", {}).get("layout", "unknown")
         by_layout[layout]["total"] += 1
-        by_layout[layout]["name_hits"] += predicted.get("name") == truth.get("name")
+        by_layout[layout]["name_hits"] += _field_match(
+            "name", predicted.get("name"), truth.get("name")
+        )
         by_layout[layout]["experience_hits"] += experience_match
 
     total = len(cv_files) - len(extraction_errors)
@@ -114,15 +151,18 @@ def evaluate(extractor_name: str, data_dir: Path, limit: int | None = None) -> d
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Evaluate an extractor against ground truth.")
-    parser.add_argument("--extractor", default="baseline", help="baseline | llm")
+    parser.add_argument("--extractor", default="baseline", help="baseline | llm | stored")
 
     parser.add_argument("--limit", type=int, help="only evaluate the first N CVs")
     parser.add_argument("--data", type=Path,
                         default=Path(__file__).resolve().parents[1] / "data" / "synthetic",
                         help="directory holding cv_*.txt and cv_*.json")
+    parser.add_argument("--records", type=Path,
+                        default=Path(__file__).resolve().parents[1] / "data" / "extracted",
+                        help="for --extractor stored: directory holding the persisted extractions")
     args = parser.parse_args()
 
-    report = evaluate(args.extractor, args.data, limit=args.limit)
+    report = evaluate(args.extractor, args.data, limit=args.limit, records_dir=args.records)
     print(json.dumps(report, indent=2, ensure_ascii=False))
 
 

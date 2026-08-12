@@ -125,7 +125,8 @@ python src/check_connection.py
 
 # 5. The LLM extractor
 python src/extract_llm.py data/samples/cv_0003.txt
-python src/evaluate.py --extractor llm --limit 5    # start small
+python src/evaluate.py --extractor llm --limit 5    # start small — this one spends tokens
+python src/evaluate.py --extractor stored           # re-score persisted extractions, free
 
 # 6. Score and rank — deterministic, no model call
 python src/score.py --top 10
@@ -188,17 +189,17 @@ and non-determinism are not justified.
 | Schema-valid records | 60 / 60 |
 | Hallucinated skills | 0 |
 | Name · email · phone · years | 100% |
-| **Location** | **82%** |
+| **Location** | **81.7%** |
 | Skills — recall / precision | 100% / 98.8% |
-| **Work history (entry count)** | **43%** |
+| **Work history (entry count)** | **43.3%** |
 
 By CV layout, the pattern is unambiguous:
 
 | Layout | CVs | Work history correct |
 |---|---|---|
-| `classic` — clear headings | 15 | **100%** |
-| `compact` — inlined facts | 21 | **19%** |
-| `verbose` — facts in prose | 24 | **8%** |
+| `classic` — clear headings | 24 | **100%** |
+| `compact` — inlined facts | 22 | **4.5%** |
+| `verbose` — facts in prose | 14 | **7.1%** |
 
 Rules are excellent at closed vocabularies and fixed formats — a skill list and an email
 address are pattern-matching problems, and pattern matching solves them perfectly and for
@@ -209,32 +210,59 @@ the pattern has no concept of a place, so it happily returns
 
 ### Head to head
 
-Both extractors over the same first 5 CVs (`--limit 5`), against a free model behind a
+Both extractors over the **full 60-CV dataset**, against a free model behind a
 multi-provider gateway:
-
-> ⚠️ These figures were measured **before** the dataset revision described under
-> [Scoring](#the-rubric-audits-itself), which changed how skills are distributed. The
-> direction of the gap still holds; the exact numbers need re-measuring.
 
 | Metric | Baseline | LLM |
 |---|---|---|
-| Schema-valid records | 5 / 5 | 5 / 5 |
+| Schema-valid records | 60 / 60 | 60 / 60 |
 | Hallucinated skills | 0 | 0 |
 | Name · email · phone · years | 100% | 100% |
-| Skills — recall / precision | 100% / 100% | 100% / 100% |
-| **Location** | 60% | **100%** |
-| **Work history (entry count)** | 20% | **100%** |
+| Skills — recall / precision | 100% / 98.8% | 100% / 98.8% |
+| **Location** | 81.7% | **100%** |
+| **Work history (entry count)** | 43.3% | **100%** |
 
-**Reading the result.** The LLM wins exactly where the measured gap predicted it would —
-structure and free-text location — and ties everywhere the rules were already perfect. It
-does not win *generally*; it wins *specifically*. On a closed skill vocabulary the rules
-match it at zero cost and zero latency, which is a result worth stating plainly rather
-than hiding: the case for the LLM is the two rows where rules collapse, not the whole table.
+Reproduce it without spending tokens again — the extractions are persisted, so the numbers
+are checkable by anyone holding the same records:
 
-> **Sample size.** The head-to-head is n=5 — enough to confirm the direction of the gap,
-> not enough to separate 95% from 100%. The baseline column of the full 60-CV run is the
-> more reliable of the two. Re-running the LLM over the full dataset is the obvious next
-> measurement.
+```bash
+python src/evaluate.py --extractor baseline
+python src/evaluate.py --extractor stored     # scores data/extracted/, no model call
+```
+
+**Reading the result.** The LLM wins in exactly two rows and ties in every other. Both
+winning rows are the same shape of problem: a field whose value has no reliable surface
+pattern. A city can appear anywhere in a header, and a work history is prose. Everything
+the rules already handle — an email, a phone number, a year count, a skill drawn from a
+closed vocabulary — they handle perfectly, at zero cost and zero latency.
+
+So the case for the LLM here is two fields, not a table. That is a more useful result than
+"the LLM is better", because it tells you where the money goes.
+
+#### The metric was measuring the wrong thing
+
+The first full run scored the LLM at **75% on name**, with the failures concentrated in one
+layout: 37.5% on `classic` against 100% on the other two. That pattern is too clean to be
+model error, and it wasn't:
+
+```
+cv_0009  classic  truth 'Anna Bakker'   predicted 'ANNA BAKKER'
+cv_0026  classic  truth 'Marta Lindqvist'  predicted 'MARTA LINDQVIST'
+```
+
+All 15 mismatches differed **only in capitalisation**. The `classic` layout prints the name
+as an ALL-CAPS header, and the LLM returned what the document said — which is what a
+faithful extractor should do. The baseline title-cases as a side effect of how it parses,
+and scored 100% for a reason that had nothing to do with being more accurate.
+
+The extractor was not changed. The comparison was: `name`, `email` and `location` are now
+compared case-insensitively, because a name is the same name whichever case the CV shouts
+it in. An exact-match test on a name measures formatting and reports it as accuracy.
+
+Worth being explicit about the direction of this correction — it *raised* a number, which is
+the direction that deserves the most suspicion. The check that makes it safe is that the
+error was diagnosed before the fix and the fix was applied to **both** extractors, so the
+comparison above is measured under one metric rather than two.
 
 ### How the LLM extractor is constrained
 
@@ -608,19 +636,65 @@ refused: a reason is required: an override with no stated reason is not reviewab
 The log itself is git-ignored. It is a record of real decisions about real people and
 belongs in an access-controlled store with a retention policy, not in a repository.
 
+### The review interface, and why the CLI was not enough
+
+Every claim above was true while the only way to exercise human oversight was this:
+
+```bash
+python src/decisions.py --cv cv_0058 --decision advance --actor recruiter@example.com \
+    --reason "claims-handling background is directly relevant"
+```
+
+No recruiter will ever type that. An oversight control nobody can operate is a documented
+checkbox, not oversight — so `src/api.py` and `web/` exist to make the control usable by
+the person the regulation actually has in mind.
+
+**The API adds no second scoring path.** Every endpoint delegates to the modules the CLI
+already uses — `rank`, `apply_overrides`, `record`, `verify_evidence` — so the interface
+and the command line cannot drift into scoring a candidate differently. There is no
+scoring logic in `api.py` and none in the browser.
+
+**Clicking a requirement highlights the text that earned it.** `locate_evidence()` returns
+the character offsets of each evidence span in the source CV, and the UI marks them in the
+CV as submitted. This is the point of the whole evidence-span design: a reviewer can see
+that "REST API integration — 15/15" rests on the literal string `REST APIs` at offset 477,
+and a candidate who contests the score can be shown the same thing.
+
+**Name-blindness survives the interface.** `scorable_view()` keeps identity out of the
+scorer; the API keeps the two apart in its response shape, and the UI states it in the
+header rather than leaving it to be inferred. Names are displayed because a reviewer needs
+them; they travel on a different path from the one that produced the number.
+
+**Degradation is visible, not papered over.** Only extracted records carry evidence spans.
+When the API is serving ground truth instead, `/api/health` reports `has_evidence: false`
+and the UI says highlighting is unavailable — rather than silently showing a score with no
+way to check it.
+
+```bash
+# terminal 1 — the API
+python -m uvicorn api:app --app-dir src --port 8017 --reload
+
+# terminal 2 — the review UI (proxies /api to 8017, so no CORS)
+cd web && npm install && npm run dev
+```
+
+`REVIEW_RECORDS=data/synthetic` forces the ground-truth source if you want to see the
+degraded state deliberately.
+
 ## Tests, and the bug they found
 
-Five suites, all offline — no key, no network, no cost:
+Six suites, all offline — no key, no network, no cost:
 
 ```
 $ python tests/run_all.py
-PASS  test_validation.py       shape drift, bounds, invented evidence
-PASS  test_parse.py            JSON recovery from fenced / prefaced / trailing prose
-PASS  test_alias_matching.py   forms that must match, near-misses that must not
-PASS  test_decisions.py        append-only history, mandatory provenance, safe retries
-PASS  test_bias_parity.py      matched-pair score and extraction parity
+PASS  test_validation.py         shape drift, bounds, invented evidence
+PASS  test_parse.py              JSON recovery from fenced / prefaced / trailing prose
+PASS  test_alias_matching.py     forms that must match, near-misses that must not
+PASS  test_evaluation_metric.py  what the metric forgives, and what it must still catch
+PASS  test_decisions.py          append-only history, mandatory provenance, safe retries
+PASS  test_bias_parity.py        matched-pair score and extraction parity
 
-5/5 suites passed
+6/6 suites passed
 ```
 
 Everything the README claims about surviving a provider that ignores a schema, or about
@@ -670,10 +744,12 @@ cv-screening-pipeline/
 ├── data/
 │   ├── samples/         3 committed examples, so the repo reads without running anything
 │   ├── synthetic/       Full generated set (git-ignored — reproducible from the seed)
+│   ├── extracted/       Persisted LLM extractions (git-ignored — regenerable)
 │   └── role_*.json      The role definition candidates are scored against
 ├── docs/                Problem statement, decisions, compliance notes
-├── src/                 Pipeline source
-└── tests/               Tests, including failure cases
+├── src/                 Pipeline source, including api.py — the HTTP surface
+├── tests/               Tests, including failure cases
+└── web/                 React review interface (Vite + TypeScript)
 ```
 
 ---
@@ -688,7 +764,8 @@ cv-screening-pipeline/
 - [x] LLM structured extraction against the same schema
 - [x] Provider-agnostic configuration + connection diagnostic
 - [x] Local validation with a single self-repair pass
-- [x] Measured LLM-vs-baseline comparison (n=5; predates the dataset revision — re-measure)
+- [x] Measured LLM-vs-baseline comparison over the full 60-CV dataset
+- [x] Reproducible evaluation of persisted extractions (`--extractor stored`, no model call)
 - [x] Explainable scoring and ranking
 - [x] Auditable skill aliases instead of embedding similarity
 - [x] Rubric self-audit — discrimination and dead weight
@@ -699,8 +776,11 @@ cv-screening-pipeline/
 - [ ] More matched pairs — six cannot distinguish a direction from an accident
 - [x] Human-in-the-loop override flow
 - [x] Append-only audit trail with score snapshots
+- [x] Reviewer interface — evidence highlighting, decision recording, no second scoring path
 - [x] Failure-path tests for validation, evidence, parsing, decisions
 - [x] Idempotency — keyed decisions, resumable extraction
+- [x] LLM extraction over the full 60-CV dataset
+- [ ] Candidate-facing transparency notice (EU AI Act Article 50)
 - [ ] Metrics dashboard and results write-up
 
 ---

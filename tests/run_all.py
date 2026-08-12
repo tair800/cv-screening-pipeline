@@ -16,6 +16,7 @@ SUITES = [
     "test_validation.py",
     "test_parse.py",
     "test_alias_matching.py",
+    "test_evaluation_metric.py",
     "test_decisions.py",
     "test_bias_parity.py",
 ]
