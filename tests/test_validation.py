@@ -107,6 +107,11 @@ EVIDENCE_CASES = [
     ("one real, one invented",
      [{"name": "Python", "evidence": "Python"},
       {"name": "Rust", "evidence": "Rust"}], ["Rust"]),
+    # Ground-truth fixtures list skills as plain strings. They claim no evidence, so there
+    # is nothing to verify — reporting them as invented would be a category error. Whether
+    # this shape is permitted is validate_record's question.
+    ("plain-string skills claim nothing", ["Python", "Kubernetes"], []),
+    ("mixed shapes", ["Python", {"name": "Rust", "evidence": "Rust"}], ["Rust"]),
 ]
 
 

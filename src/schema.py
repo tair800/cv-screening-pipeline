@@ -95,6 +95,23 @@ def _normalise(text: str) -> str:
     return " ".join(text.lower().split())
 
 
+def locate_evidence(source_text: str, evidence: str | None) -> tuple[int, int] | None:
+    """Character offsets of an evidence span in the source CV, or None if it cannot be
+    located exactly.
+
+    `verify_evidence` collapses whitespace to compare, which is right for verification and
+    useless for highlighting — collapsing destroys the offsets. So this does an exact
+    case-insensitive search and returns None rather than guessing when the span was
+    reworded. A reviewer is then shown the quote instead of a highlight, which is honest
+    about what is known."""
+    if not evidence or not evidence.strip():
+        return None
+    start = source_text.lower().find(evidence.strip().lower())
+    if start == -1:
+        return None
+    return start, start + len(evidence.strip())
+
+
 def verify_evidence(record: dict, source_text: str) -> list[str]:
     """Return skills whose evidence span does not appear in the source CV.
 
@@ -105,7 +122,13 @@ def verify_evidence(record: dict, source_text: str) -> list[str]:
     backed by nothing at all — which is the exact failure this function exists to catch."""
     haystack = _normalise(source_text)
     unsupported = []
-    for skill in record.get("skills", []):
+    for skill in record.get("skills") or []:
+        # A plain string carries no evidence claim, so there is nothing here to verify —
+        # ground-truth fixtures are shaped that way. Whether a record is *allowed* to use
+        # that shape is validate_record's question, not this one; conflating the two would
+        # report every fixture skill as invented.
+        if not isinstance(skill, dict):
+            continue
         evidence = _normalise(skill.get("evidence") or "")
         if not evidence or evidence not in haystack:
             unsupported.append(skill.get("name", ""))

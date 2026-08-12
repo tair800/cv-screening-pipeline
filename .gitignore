@@ -29,6 +29,14 @@ env/
 .mypy_cache/
 *.egg-info/
 
+# Node / front end. web/package-lock.json is committed on purpose: the review UI has to
+# build from the same dependency tree that was measured.
+web/node_modules/
+web/dist/
+
+# Local dev server output
+*.log
+
 # Editors / OS
 .vscode/
 .idea/
